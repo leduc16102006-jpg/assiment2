@@ -1,0 +1,66 @@
+@startuml Task1.3_Dat_ThanhToan_DonHang
+' ==============================
+' Task 1.3 – Đặc tả Use-Case Chi Tiết
+' Tên: Đặt và Thanh Toán Đơn Hàng
+' Hệ thống: BrewLite
+' ==============================
+
+left to right direction
+skinparam useCase {
+  BackgroundColor #f0f8ff
+  BorderColor #2c3e50
+}
+skinparam actor {
+  BackgroundColor #ecf0f1
+  BorderColor #34495e
+}
+
+' --- Actor ---
+actor "Khách Hàng" as KH
+
+' --- Hệ thống biên ---
+rectangle "BrewLite" {
+  ' Use-case chính
+  (Đặt và Thanh Toán Đơn Hàng) as UC_MAIN
+
+  ' Các use-case con / bao gồm
+  (Đơn hàng: Thẩm định khuyến mãi) as UC_PROMO
+  (Thanh toán: Cộng điểm loyalty) as UC_LOYALTY
+}
+
+' Hệ thống bên ngoài
+actor "Payment Gateway\n(Mock)" as PG
+
+' --- Liên kết chính ---
+KH -- UC_MAIN
+
+' Quan hệ include
+UC_MAIN -[dashed]-> UC_PROMO : <<include>>
+UC_MAIN -[dashed]-> UC_LOYALTY : <<include>>
+
+' Kết nối cổng thanh toán
+UC_MAIN --> PG : Gọi & nhận phản hồi
+
+' --- Ghi chú ---
+note top of UC_MAIN
+  **Kích hoạt**: Khách nhấn "Đặt hàng"
+  **Tiền điều kiện**:
+  • Đã đăng nhập
+  • Giỏ hàng có sản phẩm
+  • Tổng tiền > 0
+end note
+
+note bottom of UC_MAIN
+  **Hậu điều kiện thành công**:
+  • Đơn hàng đã tạo & xác nhận
+  • Khuyến mãi áp dụng (nếu có)
+  • Thanh toán đã ghi nhận
+  • Điểm loyalty được cộng
+end note
+
+note right of PG
+  Môi trường giả lập
+  Xác nhận/từ chối giao dịch
+end note
+
+@enduml
