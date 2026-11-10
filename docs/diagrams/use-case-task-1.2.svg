@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="1010" viewBox="0 0 1760 1010" role="img" aria-label="Sơ đồ Use-case tổng quát BrewLite Task 1.2">
+  <title>Task 1.2 - Sơ đồ Use-case tổng quát BrewLite</title>
+  <desc>Sơ đồ UML nền trắng, nét đơn sắc; actor Khách hàng, hệ thống ngoài VNPay Sandbox, 11 use-case.</desc>
+  <defs>
+    <marker id="uml-arrow" viewBox="0 0 12 12" markerWidth="9" markerHeight="9" refX="11" refY="6" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11" fill="white" stroke="#273240" stroke-width="1.4" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="1760" height="1010" fill="white" />
+  <g font-family="Arial, Noto Sans, sans-serif" fill="#273240">
+    <text x="68" y="62" font-size="22" font-weight="bold">Task 1.2</text>
+    <text x="68" y="114" font-size="34" font-weight="bold">SƠ ĐỒ USE-CASE TỔNG QUÁT</text>
+    <rect x="305" y="157" width="1178" height="781" fill="none" stroke="#273240" stroke-width="2"/>
+    <text x="329" y="193" font-size="21" font-weight="bold">Hệ thống BrewLite</text>
+    <!-- actor person -->
+    <g fill="none" stroke="#273240" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="125" cy="477" r="17" />
+      <path d="M125 494 V559 M91 520 H159 M125 559 L97 609 M125 559 L153 609"/>
+    </g>
+    <text x="125" y="647" text-anchor="middle" font-size="19" font-weight="bold">Khách hàng</text>
+    <!-- associations behind use-case ellipses -->
+
+    <line x1="160" y1="520" x2="403" y2="254" stroke="#273240" stroke-width="1.6" />
+    <line x1="160" y1="520" x2="403" y2="332" stroke="#273240" stroke-width="1.6" />
+    <line x1="160" y1="520" x2="403" y2="410" stroke="#273240" stroke-width="1.6" />
+    <line x1="160" y1="520" x2="403" y2="488" stroke="#273240" stroke-width="1.6" />
+    <line x1="160" y1="520" x2="403" y2="566" stroke="#273240" stroke-width="1.6" />
+    <line x1="160" y1="520" x2="403" y2="644" stroke="#273240" stroke-width="1.6" />
+    <line x1="160" y1="520" x2="403" y2="722" stroke="#273240" stroke-width="1.6" />
+    <line x1="160" y1="520" x2="403" y2="842" stroke="#273240" stroke-width="1.6" />
+    <!-- use-case relationship paths -->
+    <path d="M 787 722 L 968 722" stroke="#273240" stroke-width="1.7" fill="none" stroke-dasharray="8 5" marker-end="url(#uml-arrow)" />
+    <!-- promotion extends checkout: arrow points TO checkout -->
+    <path d="M 988 428 L 772 703" stroke="#273240" stroke-width="1.7" fill="none" stroke-dasharray="8 5" marker-end="url(#uml-arrow)" />
+    <!-- loyalty extends payment: arrow points TO payment -->
+    <path d="M 1163 812 L 1163 752" stroke="#273240" stroke-width="1.7" fill="none" stroke-dasharray="8 5" marker-end="url(#uml-arrow)" />
+    <!-- external VNPay actor association -->
+    <path d="M 1358 722 L 1523 722" stroke="#273240" stroke-width="1.6" fill="none" />
+
+    <ellipse cx="595" cy="254" rx="192" ry="30" stroke="#273240" stroke-width="1.8" fill="#FFFFFF" />
+    <text x="595" y="260" text-anchor="middle" font-size="19">Xem danh sách đồ uống</text>
+    <ellipse cx="595" cy="332" rx="192" ry="30" stroke="#273240" stroke-width="1.8" fill="#FFFFFF" />
+    <text x="595" y="338" text-anchor="middle" font-size="19">Xem chi tiết sản phẩm</text>
+    <ellipse cx="595" cy="410" rx="192" ry="30" stroke="#273240" stroke-width="1.8" fill="#FFFFFF" />
+    <text x="595" y="416" text-anchor="middle" font-size="19">Chọn size / topping</text>
+    <ellipse cx="595" cy="488" rx="192" ry="30" stroke="#273240" stroke-width="1.8" fill="#FFFFFF" />
+    <text x="595" y="494" text-anchor="middle" font-size="19">Quản lý giỏ hàng</text>
+    <ellipse cx="595" cy="566" rx="192" ry="30" stroke="#273240" stroke-width="1.8" fill="#FFFFFF" />
+    <text x="595" y="572" text-anchor="middle" font-size="19">Đăng ký tài khoản</text>
+    <ellipse cx="595" cy="644" rx="192" ry="30" stroke="#273240" stroke-width="1.8" fill="#FFFFFF" />
+    <text x="595" y="650" text-anchor="middle" font-size="19">Đăng nhập</text>
+    <ellipse cx="595" cy="722" rx="192" ry="30" stroke="#273240" stroke-width="1.8" fill="#FFFFFF" />
+    <text x="595" y="728" text-anchor="middle" font-size="19">Đặt và thanh toán đơn</text>
+    <ellipse cx="595" cy="842" rx="192" ry="30" stroke="#273240" stroke-width="1.8" fill="#FFFFFF" />
+    <text x="595" y="848" text-anchor="middle" font-size="19">Xem trạng thái / lịch sử</text>
+    <ellipse cx="1163" cy="412" rx="195" ry="30" stroke="#273240" stroke-width="1.8" fill="#FFFFFF" />
+    <text x="1163" y="418" text-anchor="middle" font-size="19">Áp dụng mã khuyến mãi</text>
+    <ellipse cx="1163" cy="722" rx="195" ry="30" stroke="#273240" stroke-width="1.8" fill="#FFFFFF" />
+    <text x="1163" y="728" text-anchor="middle" font-size="19">Thanh toán qua VNPay</text>
+    <ellipse cx="1163" cy="842" rx="195" ry="30" stroke="#273240" stroke-width="1.8" fill="#FFFFFF" />
+    <text x="1163" y="848" text-anchor="middle" font-size="19">Ghi nhận điểm thưởng</text>
+    <!-- UML relationship labels -->
+    <rect x="830" y="699" width="95" height="23" fill="white" />
+    <text x="877" y="717" text-anchor="middle" font-size="16">«include»</text>
+    <rect x="861" y="559" width="89" height="23" fill="white" />
+    <text x="905" y="576" text-anchor="middle" font-size="16">«extend»</text>
+    <rect x="1235" y="791" width="151" height="23" fill="white" />
+    <text x="1310" y="808" text-anchor="middle" font-size="15">«extend» [PAID]</text>
+    <!-- external system as UML classifier actor -->
+    <rect x="1523" y="678" width="216" height="90" fill="white" stroke="#273240" stroke-width="1.8" />
+    <text x="1631" y="708" text-anchor="middle" font-size="16">«actor»</text>
+    <text x="1631" y="739" text-anchor="middle" font-size="20" font-weight="bold">VNPay Sandbox</text>
+  </g>
+</svg>
