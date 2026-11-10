@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1120" viewBox="0 0 1700 1120" role="img" aria-label="Sơ đồ Use-case tổng quát BrewLite Task 1.2">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" stroke="#111" stroke-width="1.3" fill="none" /></marker></defs>
+<rect x="0" y="0" width="1700" height="1120" fill="white"/>
+<text x="90" y="63" font-family="Noto Sans,Arial,sans-serif" font-size="23" font-weight="700" fill="#111">Task 1.2</text>
+<text x="90" y="122" font-family="Noto Sans,Arial,sans-serif" font-size="31" font-weight="700" fill="#111">SƠ ĐỒ USE-CASE TỔNG QUÁT</text>
+<rect x="235" y="152" width="1180" height="895" fill="none" stroke="#111" stroke-width="2"/>
+<line x1="235" x2="1415" y1="204" y2="204" stroke="#111" stroke-width="1.4"/>
+<text x="825" y="184" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="22" font-weight="700">HỆ THỐNG BREWLITE</text>
+<rect x="865" y="856" width="525" height="180" fill="none" stroke="#666" stroke-width="1.5" stroke-dasharray="8 6"/>
+<text x="1127" y="881" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="15" font-style="italic">Future / Out-of-scope for MVP</text>
+<circle cx="112" cy="474" r="16" fill="white" stroke="#111" stroke-width="2.2"/>
+<path d="M112 490 V555 M84 517 H140 M112 555 l-30 42 M112 555 l30 42" fill="none" stroke="#111" stroke-width="1.6" stroke-linecap="round"/>
+<text x="112" y="626" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="19" font-weight="700">Khách hàng</text>
+<path d="M165 532 L370.0 260" fill="none" stroke="#111" stroke-width="1.6" />
+<path d="M165 532 L370.0 347" fill="none" stroke="#111" stroke-width="1.6" />
+<path d="M165 532 L370.0 434" fill="none" stroke="#111" stroke-width="1.6" />
+<path d="M165 532 L370.0 521" fill="none" stroke="#111" stroke-width="1.6" />
+<path d="M165 532 L370.0 608" fill="none" stroke="#111" stroke-width="1.6" />
+<path d="M165 532 L370.0 695" fill="none" stroke="#111" stroke-width="1.6" />
+<path d="M165 532 L360.0 782" fill="none" stroke="#111" stroke-width="1.6" />
+<path d="M165 532 L360.0 869" fill="none" stroke="#111" stroke-width="1.6" />
+<rect x="1475" y="732" width="176" height="106" fill="white" stroke="#111" stroke-width="1.7"/>
+<text x="1563" y="763" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="16">«actor»</text>
+<text x="1563" y="791" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="19" font-weight="700">VNPay Sandbox</text>
+<text x="1563" y="815" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="14">Payment Gateway</text>
+<path d="M1245 782 L1475 782" fill="none" stroke="#111" stroke-width="1.6" />
+<circle cx="1565" cy="883" r="16" fill="white" stroke="#111" stroke-width="2.2"/>
+<path d="M1565 899 V964 M1537 926 H1593 M1565 964 l-30 42 M1565 964 l30 42" fill="none" stroke="#111" stroke-width="1.6" stroke-linecap="round"/>
+<text x="1565" y="1029" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="17" font-weight="700">Barista /</text>
+<text x="1565" y="1052" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="17" font-weight="700">Nhân viên quầy</text>
+<path d="M1537 926 L1248.0 939" fill="none" stroke="#111" stroke-width="1.6" />
+<path d="M1537 926 L1248.0 1000" fill="none" stroke="#111" stroke-width="1.6" />
+<path d="M585 318 L585 289" fill="none" stroke="#111" stroke-width="1.6" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<text x="607" y="312" font-family="Noto Sans,Arial,sans-serif" font-size="16">«extend»</text>
+<path d="M691 768 L780 727 L780 705 L681 705" fill="none" stroke="#111" stroke-width="1.6" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<rect x="779" y="709" width="88" height="25" fill="white"/>
+<text x="782" y="729" font-family="Noto Sans,Arial,sans-serif" font-size="16">«include»</text>
+<path d="M944 488 L790 645 L696 762" fill="none" stroke="#111" stroke-width="1.6" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<rect x="793" y="619" width="88" height="25" fill="white"/>
+<text x="795" y="638" font-family="Noto Sans,Arial,sans-serif" font-size="16">«extend»</text>
+<path d="M700 795 L925 795" fill="none" stroke="#111" stroke-width="1.6" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<rect x="762" y="763" width="88" height="25" fill="white"/>
+<text x="765" y="782" font-family="Noto Sans,Arial,sans-serif" font-size="16">«include»</text>
+<ellipse cx="530" cy="260" rx="160.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="530" y="266" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Xem menu</text>
+<ellipse cx="530" cy="347" rx="160.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="530" y="353" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Xem chi tiết món</text>
+<ellipse cx="530" cy="434" rx="160.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="530" y="440" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Chọn size / topping</text>
+<ellipse cx="530" cy="521" rx="160.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="530" y="527" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Quản lý giỏ hàng</text>
+<ellipse cx="530" cy="608" rx="160.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="530" y="614" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Đăng ký tài khoản</text>
+<ellipse cx="530" cy="695" rx="160.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="530" y="701" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Đăng nhập</text>
+<ellipse cx="530" cy="782" rx="170.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="530" y="788" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Đặt hàng &amp; Thanh toán</text>
+<ellipse cx="530" cy="869" rx="170.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="530" y="875" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Xem lịch sử / trạng thái đơn</text>
+<ellipse cx="1085" cy="460" rx="155.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="1085" y="466" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Áp dụng mã giảm giá</text>
+<ellipse cx="1085" cy="782" rx="160.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="1085" y="788" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Xử lý thanh toán</text>
+<ellipse cx="1083" cy="939" rx="165.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="1083" y="945" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Tiếp nhận đơn</text>
+<ellipse cx="1083" cy="1000" rx="165.0" ry="29" fill="white" stroke="#111" stroke-width="1.7"/><text x="1083" y="1006" text-anchor="middle" font-family="Noto Sans,Arial,sans-serif" font-size="18">Cập nhật trạng thái pha chế</text>
+</svg>
