@@ -24,19 +24,23 @@
 1. Khách hàng đã xem menu, chọn sản phẩm (size/topping) và thêm vào giỏ hàng 
 2. Đã đăng nhập/tài khoản hợp lệ
 3. Giỏ hàng có sản phẩm, tổng tiền 
-4. Hệ thống kết nối được cổng thanh toán và dịch vụ điểm thành viên |
+4. Hệ thống kết nối được cổng thanh toán và dịch vụ điểm thành viên 
+5. Hệ thống đã kết nối và có dữ liệu tồn kho nguyên liệu hợp lệ
 | Hậu điều kiện — Thành công | 
 1. Đơn hàng được tạo với trạng thái **"Đã xác nhận / Chờ xử lý"**
 2. Khuyến mãi (nếu có) được áp dụng hợp lệ
 3. Thanh toán được ghi nhận thành công qua Payment Gateway
 4. Điểm loyalty được cộng vào tài khoản
 5. Lịch sử đơn hàng cập nhật, hiển thị trạng thái mới
-6. Thông báo xác nhận hiển thị cho khách hàng |
+6. Thông báo xác nhận hiển thị cho khách hàng 
+7. Tồn kho nguyên liệu được trừ tương ứng trong cơ sở dữ liệu
+8. Giỏ hàng của khách hàng được tự động dọn sạch
 | Hậu điều kiện — Thất bại | 
 1. Không tạo đơn hàng mới
 2. Giữ nguyên trạng thái giỏ hàng
 3. Không áp dụng khuyến mãi, không trừ/cộng điểm
-4. Thông báo rõ nguyên nhân lỗi |
+4. Thông báo rõ nguyên nhân lỗi 
+5. Nếu đã giữ/chốt nguyên liệu trong kho → tự động hoàn trả lại kho khi giao dịch thất bại
 | Mã yêu cầu liên kết | REQ-BL-003, REQ-BL-004, REQ-BL-005, REQ-BL-007, REQ-BL-012 |
 
 ---
@@ -48,14 +52,15 @@
 |---|---|---|
 | 1 | Khách hàng | Truy cập trang thanh toán, xem lại giỏ hàng (sản phẩm, size/topping, tạm tính) |
 | 2 | Khách hàng | Nhập/thông tin giao hàng, chọn áp dụng mã khuyến mãi (nếu có) |
-| 3 | Hệ thống | Thực hiện **Thẩm định khuyến mãi** → mã hợp lệ, tính giảm giá |
-| 4 | Khách hàng | Chọn phương thức thanh toán: **Ví điện tử** hoặc **Thẻ** |
-| 5 | Hệ thống | Tạo yêu cầu thanh toán gửi đến **Payment Gateway (Mock)** |
-| 6 | Khách hàng | Xác nhận thanh toán với thông tin ví/thẻ |
-| 7 | Payment Gateway | Xác nhận giao dịch thành công → trả về kết quả cho BrewLite |
-| 8 | Hệ thống | Thực hiện **Cộng điểm loyalty** dựa trên giá trị đơn hàng |
-| 9 | Hệ thống | Tạo bản ghi đơn hàng, cập nhật lịch sử & trạng thái |
-| 10 | Hệ thống | Hiển thị thông báo thành công + mã đơn hàng + điểm đã cộng |
+| 3 | Hệ thống | Kiểm tra tồn kho nguyên liệu đủ cho toàn bộ sản phẩm trong đơn (sử dụng Database Transaction + Optimistic Lock) |
+| 4 | Hệ thống | Thực hiện **Thẩm định khuyến mãi** → mã hợp lệ, tính giảm giá |
+| 5 | Khách hàng | Chọn phương thức thanh toán: **Ví điện tử** hoặc **Thẻ** |
+| 6 | Hệ thống | Tạo yêu cầu thanh toán gửi đến **Payment Gateway (Mock)** |
+| 7 | Khách hàng | Xác nhận thanh toán với thông tin ví/thẻ |
+| 8 | Payment Gateway | Xác nhận giao dịch thành công → trả về kết quả cho BrewLite |
+| 9 | Hệ thống | Thực hiện **Cộng điểm loyalty** dựa trên giá trị đơn hàng |
+| 10 | Hệ thống | Tạo bản ghi đơn hàng, cập nhật lịch sử & trạng thái |
+| 11 | Hệ thống | Hiển thị thông báo thành công + mã đơn hàng + điểm đã cộng |
 
 ### 3.2 Luồng thay thế
 | Mã | Xảy ra tại bước | Tình huống | Xử lý & Kết quả |
@@ -67,10 +72,12 @@
 ### 3.3 Luồng ngoại lệ
 | Mã | Xảy ra tại bước | Tình huống | Xử lý & Kết quả |
 |---|---|---|---|
-| EX-01 | 5–7 | Kết nối Payment Gateway thất bại / giao dịch bị từ chối | Thông báo "Thanh toán không thành công"; giữ nguyên giỏ hàng; cho phép thử lại hoặc đổi phương thức |
+| EX-01 | 5–7 | Kết nối Payment Gateway thất bại / giao dịch bị từ chối | Thông báo "Thanh toán không thành công"; **hoàn trả lại nguyên liệu đã giữ về kho**; giữ nguyên giỏ hàng; cho phép thử lại hoặc đổi phương thức thanh toán |
 | EX-02 | 3 | Hệ thống khuyến mãi không phản hồi tạm thời | Thông báo "Không thể kiểm tra mã khuyến mãi, vui lòng thử lại sau"; không áp dụng giảm giá; cho phép tiếp tục thanh toán |
 | EX-03 | 8 | Cộng điểm thất bại sau khi thanh toán thành công | Ghi nhận giao dịch thành công nhưng tách riêng lỗi điểm; thông báo "Đơn hàng thành công, điểm sẽ được cập nhật sau"; gửi yêu cầu xử lý thủ công |
 | EX-04 | 9 | Lỗi cơ sở dữ liệu khi lưu đơn hàng | Tự động gọi hoàn tiền qua Payment Gateway; thông báo lỗi; không tạo đơn; ghi log chi tiết |
+| EX-05 | 3 | Nguyên liệu/sản phẩm trong kho không đủ | Hủy bỏ transaction; thông báo "Sản phẩm hiện không đủ hàng"; giữ nguyên giỏ hàng; hiển thị gợi ý điều chỉnh số lượng |
+| EX-06 | Bước bất kỳ cần xác thực | Phiên đăng nhập hết hạn / Token không hợp lệ | Lưu trạng thái giỏ hàng tạm thời; chuyển hướng đến trang đăng nhập với thông báo "Vui lòng đăng nhập lại để tiếp tục đặt hàng" |
 
 ---
 
@@ -83,6 +90,8 @@
 | REQ-BL-005 | Tích hợp cổng thanh toán (môi trường giả lập) | 5–7 |
 | REQ-BL-007 | Tích lũy điểm thành viên theo giá trị đơn hàng | 8, 10 |
 | REQ-BL-012 | Khách hàng xem trạng thái & lịch sử đơn hàng | 9, 10 |
+| REQ-BL-013 | Hệ thống kiểm tra và cập nhật tồn kho nguyên liệu khi đặt/hủy đơn | 3, EX-01, EX-05 | 
+| REQ-BL-014 | Hệ thống quản lý phiên đăng nhập và xác thực người dùng | EX-06 | 
 
 ---
 
@@ -110,3 +119,6 @@
 | TC-1.3-03 | Thanh toán bị từ chối bởi cổng | Không tạo đơn, giữ giỏ hàng, hiển thị lý do |
 | TC-1.3-04 | Thanh toán thành công nhưng lỗi cộng điểm | Đơn tồn tại, thông báo rõ, điểm cập nhật sau |
 | TC-1.3-05 | Chọn thanh toán bằng điểm loyalty | Quy đổi đúng, hoàn tất đơn, ghi lịch sử |
+| TC-1.3-06 | Đặt hàng khi nguyên liệu không đủ trong kho | Thông báo hết hàng, không tạo đơn, giữ giỏ hàng, không trừ kho | 
+| TC-1.3-07 | Đặt hàng khi phiên đăng nhập hết hạn giữa chừng | Chuyển về trang đăng nhập, không mất dữ liệu giỏ hàng |  
+| TC-1.3-08 | Thanh toán thất bại sau khi đã giữ nguyên liệu trong kho | Nguyên liệu được trả về kho, giỏ hàng nguyên vẹn, có thể thử lại |

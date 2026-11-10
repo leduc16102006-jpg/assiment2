@@ -18,49 +18,44 @@ skinparam actor {
 ' --- Actor ---
 actor "Khách Hàng" as KH
 
-' --- Hệ thống biên ---
+' --- Hệ thống nội bộ ---
 rectangle "BrewLite" {
-  ' Use-case chính
   (Đặt và Thanh Toán Đơn Hàng) as UC_MAIN
-
-  ' Các use-case con / bao gồm
-  (Đơn hàng: Thẩm định khuyến mãi) as UC_PROMO
-  (Thanh toán: Cộng điểm loyalty) as UC_LOYALTY
 }
 
-' Hệ thống bên ngoài
-actor "Payment Gateway\n(Mock)" as PG
+' --- Hệ thống bên ngoài ---
+rectangle "Hệ thống Bên Ngoài" {
+  (Cổng Thanh Toán\nVNPay / Mock) as PG
+  (Hệ thống Quản Lý Kho) as KHO
+  (Hệ thống Điểm Thành Viên) as LOYALTY
+}
 
 ' --- Liên kết chính ---
-KH -- UC_MAIN
-
-' Quan hệ include
-UC_MAIN -[dashed]-> UC_PROMO : <<include>>
-UC_MAIN -[dashed]-> UC_LOYALTY : <<include>>
-
-' Kết nối cổng thanh toán
-UC_MAIN --> PG : Gọi & nhận phản hồi
+KH -- UC_MAIN : Thực hiện đặt hàng
+UC_MAIN --> PG : Yêu cầu & xác nhận thanh toán
+UC_MAIN --> KHO : Kiểm tra & cập nhật tồn kho
+UC_MAIN --> LOYALTY : Tích lũy điểm thành viên
 
 ' --- Ghi chú ---
 note top of UC_MAIN
   **Kích hoạt**: Khách nhấn "Đặt hàng"
   **Tiền điều kiện**:
-  • Đã đăng nhập
-  • Giỏ hàng có sản phẩm
-  • Tổng tiền > 0
+  • Đã đăng nhập hợp lệ
+  • Giỏ hàng có sản phẩm hợp lệ
 end note
 
 note bottom of UC_MAIN
   **Hậu điều kiện thành công**:
-  • Đơn hàng đã tạo & xác nhận
-  • Khuyến mãi áp dụng (nếu có)
-  • Thanh toán đã ghi nhận
+  • Đơn hàng trạng thái PAID
+  • Tồn kho được cập nhật
+  • Thanh toán đã xác nhận
   • Điểm loyalty được cộng
 end note
 
 note right of PG
-  Môi trường giả lập
-  Xác nhận/từ chối giao dịch
+  Hỗ trợ:
+  • VNPay
+  • Mock Gateway (kiểm thử)
 end note
 
 @enduml
