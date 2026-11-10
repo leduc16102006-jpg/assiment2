@@ -1,18 +1,33 @@
 @startuml Task1.3_Dat_ThanhToan_DonHang
 ' ==============================
-' Task 1.3 – Đặc tả Use-Case Chi Tiết
-' Tên: Đặt và Thanh Toán Đơn Hàng
-' Hệ thống: BrewLite
+' Task 1.3 – Use-Case: Đặt & Thanh Toán Đơn Hàng
+' BrewLite
 ' ==============================
 
 left to right direction
 skinparam useCase {
   BackgroundColor #f0f8ff
   BorderColor #2c3e50
+  FontName Arial
+  FontSize 11
 }
 skinparam actor {
   BackgroundColor #ecf0f1
   BorderColor #34495e
+  FontName Arial
+  FontSize 11
+}
+skinparam rectangle {
+  BackgroundColor #ffffff
+  BorderColor #2980b9
+  FontName Arial
+  FontSize 12
+}
+skinparam note {
+  BackgroundColor #fffef0
+  BorderColor #f39c12
+  FontName Arial
+  FontSize 10
 }
 
 ' --- Actor ---
@@ -20,42 +35,45 @@ actor "Khách Hàng" as KH
 
 ' --- Hệ thống nội bộ ---
 rectangle "BrewLite" {
-  (Đặt và Thanh Toán Đơn Hàng) as UC_MAIN
+  (Đặt hàng & Thanh toán) as UC_MAIN
+  (Cập nhật tồn kho) as UC_STOCK
 }
 
 ' --- Hệ thống bên ngoài ---
 rectangle "Hệ thống Bên Ngoài" {
-  (Cổng Thanh Toán\nVNPay / Mock) as PG
-  (Hệ thống Quản Lý Kho) as KHO
-  (Hệ thống Điểm Thành Viên) as LOYALTY
+  (VNPay Sandbox) as VNP
 }
 
-' --- Liên kết chính ---
-KH -- UC_MAIN : Thực hiện đặt hàng
-UC_MAIN --> PG : Yêu cầu & xác nhận thanh toán
-UC_MAIN --> KHO : Kiểm tra & cập nhật tồn kho
-UC_MAIN --> LOYALTY : Tích lũy điểm thành viên
+' --- Quan hệ ---
+KH -- UC_MAIN
+
+' include: Bắt buộc
+UC_MAIN -[dashed]-> UC_STOCK : <<include>>
+
+' extend: Tùy chọn
+(Áp dụng mã giảm giá) -[dashed]-> UC_MAIN : <<extend>>
+(Cộng điểm thành viên) -[dashed]-> UC_MAIN : <<extend>>
+
+' Kết nối cổng thanh toán
+UC_MAIN --> VNP : Gọi & nhận phản hồi thanh toán
 
 ' --- Ghi chú ---
 note top of UC_MAIN
-  **Kích hoạt**: Khách nhấn "Đặt hàng"
-  **Tiền điều kiện**:
-  • Đã đăng nhập hợp lệ
-  • Giỏ hàng có sản phẩm hợp lệ
+  **Kích hoạt**: Khách nhấn "Đặt hàng" tại trang Giỏ hàng
 end note
 
 note bottom of UC_MAIN
-  **Hậu điều kiện thành công**:
-  • Đơn hàng trạng thái PAID
-  • Tồn kho được cập nhật
-  • Thanh toán đã xác nhận
-  • Điểm loyalty được cộng
+  **Tiền điều kiện**:
+  • Đã đăng nhập / JWT hợp lệ
+  • Giỏ hàng có sản phẩm hợp lệ
 end note
 
-note right of PG
-  Hỗ trợ:
-  • VNPay
-  • Mock Gateway (kiểm thử)
+note right of VNP
+  **Hậu điều kiện thành công**:
+  • Đơn PAID được tạo
+  • Tồn kho được cập nhật
+  • Thanh toán xác nhận
+  • Điểm được cộng (nếu đủ điều kiện)
 end note
 
 @enduml
