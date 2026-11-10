@@ -46,24 +46,28 @@ MVP (Minimum Viable Product) là phiên bản sản phẩm khả dụng tối th
 Các chức năng thuộc phạm vi MVP bao gồm:
 | STT | Nhóm chức năng | Mô tả phạm vi |
 |---|---|---|
-| 1 | Xem menu sản phẩm | Hiển thị danh sách sản phẩm, thông tin cơ bản và giá bán để khách hàng lựa chọn. |
+| 1 | Xem menu sản phẩm | Hiển thị danh sách sản phẩm dưới dạng lưới , thông tin cơ bản và giá bán để khách hàng lựa chọn. |
 | 2 | Xem chi tiết sản phẩm | Hiển thị thông tin chi tiết của sản phẩm, cho phép lựa chọn kích cỡ (size) và topping. |
 | 3 | Quản lý giỏ hàng | Cho phép thêm, xóa và điều chỉnh số lượng sản phẩm trong giỏ hàng; tính toán tổng tiền dựa trên các lựa chọn của khách hàng. |
 | 4 | Xác thực tài khoản | Hỗ trợ chức năng đăng ký, đăng nhập và xác thực người dùng bằng JWT. |
-| 5 | Đặt hàng | Tiếp nhận thông tin từ giỏ hàng và tạo đơn hàng tương ứng. |
-| 6 | Thanh toán | Hỗ trợ mô phỏng quy trình thanh toán bằng Ví/Thẻ, bao gồm các trường hợp thành công và thất bại. |
+| 5 | Đặt hàng | Tiếp nhận thông tin từ giỏ hàng và tạo đơn hàng tương ứng , đặt hàng lưu đơn PENDING |
+| 6 | Thanh toán | thanh toán mô phỏng Ví/Thẻ và cổng VNPay , bao gồm các trường hợp thành công và thất bại. |
 | 7 | Quản lý và theo dõi đơn hàng | Hỗ trợ xác nhận kết quả đặt hàng, cập nhật trạng thái đơn hàng và xem lịch sử đơn hàng. |
 | 8 | Kiểm tra và xử lý lỗi | Kiểm tra dữ liệu đầu vào, xử lý các trường hợp dữ liệu không hợp lệ, sản phẩm hết hàng và thanh toán thất bại. |
+| 9 | Giao diện chức năng | hệ thống tập trung vào nền tảng web theo hướng mobile-first/PWA. |
+| 10 | Xử lý nguyên liệu | khóa tồn kho nguyên liệu bằng Optimistic Locking . |
+| 11 | Khuyến mãi | mã giảm giá & tích điểm loyalty . | 
 
 ## 3.2. Các nội dung ngoài phạm vi (Out-of-scope)
 Để đảm bảo tập trung vào các chức năng cốt lõi và phù hợp với thời gian thực hiện đồ án, một số nội dung sau không được triển khai trong phạm vi hiện tại:
-- Ứng dụng di động native: Không phát triển ứng dụng riêng biệt cho Android hoặc iOS; hệ thống tập trung vào nền tảng web theo hướng mobile-first/PWA.
 - Thanh toán tài chính thực tế: Không kết nối trực tiếp với ngân hàng hoặc các cổng thanh toán thực tế; chỉ mô phỏng quy trình thanh toán bằng Ví/Thẻ.
 - Dịch vụ giao hàng: Không xây dựng hệ thống quản lý shipper, điều phối giao hàng hoặc theo dõi vị trí giao hàng trực tiếp.
 - Quản lý kế toán chuyên sâu: Không triển khai các chức năng kế toán, lập báo cáo tài chính hoặc quản lý hóa đơn điện tử.
 - Quản lý chuỗi cung ứng: Không xây dựng hệ thống quản lý nhà cung cấp, nhập hàng và quy trình cung ứng nguyên liệu.
 - Ứng dụng trí tuệ nhân tạo: Không triển khai các chức năng dự báo nhu cầu, phân tích hành vi hoặc gợi ý sản phẩm bằng AI.
 - Quản lý nhiều chi nhánh: Phiên bản hiện tại không hướng đến việc quản lý đồng thời nhiều cửa hàng.
+- Màn hình chuyên sâu cho brista
+- thanh toán tiền mặt tại quầy . 
 
 ## 4. Các giả định (Assumptions)
 | Giả định | Mô tả |
@@ -87,7 +91,7 @@ Hệ thống BrewLite phải tuân thủ các ràng buộc về công nghệ, qu
 | Backend | Bắt buộc sử dụng NestJS để xây dựng API và xử lý nghiệp vụ. |
 | Cơ sở dữ liệu | Bắt buộc sử dụng PostgreSQL để lưu trữ dữ liệu hệ thống. |
 | Đóng gói và triển khai | Sử dụng Docker và Docker Compose để hỗ trợ đóng gói, chạy và triển khai các thành phần của hệ thống. |
-| Thanh toán | Chỉ triển khai dịch vụ thanh toán mô phỏng trong phạm vi đồ án. |
+| Thanh toán | Chỉ triển khai dịch vụ thanh toán mô phỏng VNPAY . |
 
 ## 5.2. Ràng buộc quy trình phát triển
 | Ràng buộc | Mô tả |
@@ -110,7 +114,7 @@ Trong quá trình phát triển và triển khai BrewLite, nhóm có thể gặp
 | Rủi ro | Mức độ ảnh hưởng | Biện pháp giảm thiểu |
 |---|---|---|
 | Yêu cầu nghiệp vụ chưa được xác định đầy đủ hoặc các thành viên hiểu khác nhau về yêu cầu hệ thống. | Cao | Thống nhất yêu cầu, xây dựng tài liệu SRS, use-case và tiêu chí chấp nhận trước khi triển khai. |
-| Nhiều khách hàng đặt cùng một sản phẩm trong cùng thời điểm, dẫn đến xung đột khi kiểm tra và cập nhật tồn kho. | Cao | Sử dụng transaction, kiểm soát cập nhật dữ liệu đồng thời và kiểm tra tồn kho ở phía backend. |
+| Nhiều khách hàng đặt cùng một sản phẩm trong cùng thời điểm, người dùng gửi trùng request thanh toán , Bán vượt tồn kho khi nhiều khách đặt cùng lúc | Cao | Sử dụng Idempotency-Key ,  transaction & optimistic locking , kiểm soát cập nhật dữ liệu đồng thời và kiểm tra tồn kho ở phía backend. |
 | Thanh toán thất bại hoặc một yêu cầu thanh toán được gửi lại nhiều lần. | Cao | Xử lý rõ các trường hợp thanh toán thành công/thất bại và sử dụng cơ chế idempotency để hạn chế giao dịch trùng lặp. |
 | Xảy ra lỗi trong quá trình tích hợp giữa frontend, backend và cơ sở dữ liệu. | Trung bình | Thống nhất API contract, kiểm thử tích hợp và quản lý cấu hình môi trường thống nhất. |
 | Cấu hình Docker hoặc môi trường triển khai không chính xác. | Cao | Chuẩn hóa cấu hình Docker Compose, kiểm tra môi trường và thiết lập health check. |
