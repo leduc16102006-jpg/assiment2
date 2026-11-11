@@ -91,7 +91,7 @@ Hệ thống BrewLite phải tuân thủ các ràng buộc về công nghệ, qu
 | Backend | Bắt buộc sử dụng NestJS để xây dựng API và xử lý nghiệp vụ. |
 | Cơ sở dữ liệu | Bắt buộc sử dụng PostgreSQL để lưu trữ dữ liệu hệ thống. |
 | Đóng gói và triển khai | Sử dụng Docker và Docker Compose để hỗ trợ đóng gói, chạy và triển khai các thành phần của hệ thống. |
-| Thanh toán | Chỉ triển khai dịch vụ thanh toán mô phỏng VNPAY . |
+| Thanh toán | Triển khai dịch vụ thanh toán mô phỏng (Ví/Thẻ) và tích hợp cổng thanh toán VNPay Sandbox. |
 
 ## 5.2. Ràng buộc quy trình phát triển
 | Ràng buộc | Mô tả |
