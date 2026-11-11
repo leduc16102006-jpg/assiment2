@@ -19,7 +19,7 @@ rectangle "HỆ THỐNG BREWLITE" {
   usecase "Xem menu" as Menu
   usecase "Xem chi tiết món" as Detail
   usecase "Chọn size / topping" as Options
-  usecase "Quản lý giỏ hàng" as Cart
+  usecase "Quản lý giỏ hàng" as CartS
   usecase "Đăng ký tài khoản" as Register
   usecase "Đăng nhập" as Login
   usecase "Đặt hàng & Thanh toán" as Checkout
