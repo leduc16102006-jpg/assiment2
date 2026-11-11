@@ -1,0 +1,132 @@
+@startuml Task2.2_Sequence_Dat_ThanhToan_DonHang
+' ==================================================
+' Task 2.2 — Sequence Diagram: Đặt & Thanh Toán Đơn Hàng
+' Use-Case: UC-05 | BrewLite
+' Lifeline: Customer → Next.js UI → NestJS API → Database → Payment Service
+' ==================================================
+
+skinparam participant {
+  BackgroundColor #f0f8ff
+  BorderColor #2c3e50
+  FontName Arial
+  FontSize 11
+}
+skinparam note {
+  BackgroundColor #fffef0
+  BorderColor #f39c12
+  FontName Arial
+  FontSize 9
+}
+skinparam arrow {
+  LineThickness 1.5
+  Color #2c3e50
+}
+skinparam group {
+  BackgroundColor #f8f8f8
+  BorderColor #bdc3c7
+}
+
+' --- Lifeline ---
+actor "Khách Hàng\n(Customer)" as Customer
+participant "Next.js UI\n(Frontend)" as UI
+participant "NestJS API\n(Backend)" as API
+database "PostgreSQL\n(Database)" as DB
+participant "Payment Service\n(VNPay Sandbox)" as PG
+
+' --- Bắt đầu ---
+autonumber
+
+note over Customer, PG: **Task 2.2 — Sequence Diagram: Đặt & Thanh Toán Đơn Hàng**
+
+== Bắt đầu luồng ==
+
+Customer -> UI: Nhấn "Đặt hàng" tại trang Giỏ hàng
+UI -> API: POST /orders\nAuthorization: Bearer <JWT>\nIdempotency-Key: <unique-key>
+
+note over API: 🔒 Kiểm tra Idempotency — Tránh giao dịch trùng
+API -> DB: SELECT * FROM payments\nWHERE idempotencyKey = ?
+
+alt Idempotency-Key đã tồn tại
+    API --> UI: 200 OK — Trả kết quả giao dịch cũ
+    UI --> Customer: Hiển thị trạng thái đơn hàng hiện có
+    note over Customer, PG: ⏹️ Kết thúc — Không tạo đơn trùng
+else Idempotency-Key chưa tồn tại
+
+    note over API: 🔒 Xác thực & Kiểm tra dữ liệu
+    API -> API: Kiểm tra JWT hợp lệ\nValidate DTO dữ liệu đầu vào
+
+    alt JWT không hợp lệ / Dữ liệu không hợp lệ
+        API --> UI: 401 Unauthorized / 400 Bad Request
+        UI --> Customer: Thông báo lỗi → Vui lòng đăng nhập lại
+        note over Customer, PG: ⏹️ Kết thúc
+    else Xác thực & Dữ liệu hợp lệ
+
+        note over API, DB: 📦 Transaction: Tạo đơn & Cập nhật tồn kho
+        API -> DB: BEGIN TRANSACTION
+
+        API -> DB: SELECT giỏ hàng & sản phẩm\nFOR UPDATE — Khóa dòng dữ liệu
+
+        alt Không đủ tồn kho nguyên liệu
+            API -> DB: ROLLBACK
+            API --> UI: 400 — Sản phẩm không đủ hàng
+            UI --> Customer: Thông báo: "Sản phẩm hiện không đủ hàng"
+            note over Customer, PG: ⏹️ Kết thúc
+        else Đủ tồn kho nguyên liệu
+            API -> DB: UPDATE sản phẩm SET stock = stock - ?
+            API -> DB: INSERT INTO orders\n(status: PENDING)
+            API -> DB: INSERT INTO payments\n(idempotencyKey, status: PENDING)
+            API -> DB: COMMIT
+
+            API --> UI: 201 Created\norderId + paymentUrl
+            UI --> Customer: Chuyển hướng đến trang thanh toán VNPay
+
+            == Xử lý thanh toán tại Cổng ==
+
+            Customer -> PG: Nhập thông tin & Xác nhận thanh toán
+
+            alt ✅ Thanh toán THÀNH CÔNG
+                PG -> API: VNPay IPN Callback\nTrạng thái: Thành công (00)
+                note over API: 🔒 Xác minh HMAC-SHA512 & thông tin giao dịch
+
+                alt IPN không hợp lệ (chữ ký/số tiền sai)
+                    API --> PG: 403 Forbidden
+                    note over Customer, PG: ⏹️ Dữ liệu không thay đổi
+                else IPN hợp lệ
+                    API -> DB: BEGIN TRANSACTION
+                    API -> DB: UPDATE orders SET status = 'PAID'
+                    API -> DB: UPDATE payments SET status = 'PAID'
+
+                    note over API, DB: ⭐ Tích điểm thành viên (nếu đủ điều kiện)
+                    API -> DB: Kiểm tra điều kiện tích điểm
+                    opt Đủ điều kiện tích điểm
+                        API -> DB: INSERT INTO loyaltyPoints (...)
+                    end
+
+                    API -> DB: COMMIT
+
+                    API --> PG: 200 OK — Xác nhận nhận IPN
+                    API -> UI: Cập nhật trạng thái đơn hàng
+                    UI --> Customer: ✅ Thanh toán thành công!\nMã đơn: XXX | Điểm đã cộng: XXX
+                    UI -> UI: Dọn sạch giỏ hàng
+                    note over Customer, PG: ✅ HOÀN TẤT — LUỒNG THÀNH CÔNG
+                end
+            else ❌ Thanh toán THẤT BẠI / Bị hủy
+                PG -> API: VNPay IPN Callback\nTrạng thái: Thất bại / Bị hủy
+                API -> DB: BEGIN TRANSACTION
+                API -> DB: UPDATE orders SET status = 'PAYMENT_FAILED'
+                API -> DB: UPDATE payments SET status = 'FAILED'
+
+                note over API, DB: 🔄 Hoàn trả nguyên liệu về kho
+                API -> DB: UPDATE sản phẩm SET stock = stock + ?
+
+                API -> DB: COMMIT
+
+                API --> PG: 200 OK
+                API -> UI: Cập nhật trạng thái đơn hàng
+                UI --> Customer: ❌ Thanh toán không thành công\nGiỏ hàng được giữ nguyên — vui lòng thử lại
+                note over Customer, PG: ⚠️ Kết thúc — Thất bại, giỏ hàng nguyên vẹn
+            end
+        end
+    end
+end
+@enduml
