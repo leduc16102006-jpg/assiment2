@@ -1,0 +1,57 @@
+@startuml
+' BrewLite Task 1.2 — Use-case tổng quát (theo phân công D + E)
+left to right direction
+skinparam monochrome true
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName "DejaVu Sans"
+skinparam roundCorner 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+header Task 1.2
+title SƠ ĐỒ USE-CASE TỔNG QUÁT
+
+actor "Khách hàng" as Customer
+actor "Barista / Nhân viên quầy\n(Future)" as Barista
+actor "VNPay Sandbox\n«external system»" as Gateway
+
+rectangle "HỆ THỐNG BREWLITE" {
+  usecase "Xem menu" as Menu
+  usecase "Xem chi tiết món" as Detail
+  usecase "Chọn size / topping" as Options
+  usecase "Quản lý giỏ hàng" as CartS
+  usecase "Đăng ký tài khoản" as Register
+  usecase "Đăng nhập" as Login
+  usecase "Đặt hàng & Thanh toán" as Checkout
+  usecase "Xem lịch sử / trạng thái đơn" as History
+  usecase "Áp dụng mã giảm giá" as Promotion
+  usecase "Xử lý thanh toán" as Payment
+
+  package "Future / Out-of-scope for MVP" {
+    usecase "Tiếp nhận đơn" as Accept
+    usecase "Cập nhật trạng thái pha chế" as Prepare
+  }
+}
+
+Customer -- Menu
+Customer -- Detail
+Customer -- Options
+Customer -- Cart
+Customer -- Register
+Customer -- Login
+Customer -- Checkout
+Customer -- History
+
+Detail ..> Menu : <<extend>>
+Checkout ..> Login : <<include>>
+Promotion ..> Checkout : <<extend>>
+Checkout ..> Payment : <<include>>
+Gateway -- Payment
+Barista -- Accept
+Barista -- Prepare
+
+note right of Payment
+  VNPay là hệ thống ngoài khi chọn phương thức VNPay.
+  Ví/Thẻ giả lập được xử lý nội bộ.
+end note
+@enduml
