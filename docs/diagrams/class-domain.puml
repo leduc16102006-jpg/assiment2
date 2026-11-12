@@ -1,0 +1,151 @@
+@startuml
+!pragma layout smetana
+left to right direction
+skinparam monochrome true
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam classAttributeIconSize 0
+skinparam roundcorner 0
+skinparam linetype polyline
+skinparam defaultFontName Arial
+skinparam nodesep 40
+skinparam ranksep 60
+hide empty methods
+title Task 2.3 - BREWLITE DOMAIN CLASS DIAGRAM
+
+package "TÀI KHOẢN, ĐƠN HÀNG VÀ THANH TOÁN" {
+  class User {
+    + <PK> id: Int
+    + <UQ> email: String
+    + passwordHash: String
+    + fullName: String
+    + createdAt: DateTime
+    + updatedAt: DateTime
+  }
+
+  class Order {
+    + <PK> id: Int
+    + <FK> userId: Int
+    + status: String = PENDING
+    + total: Int
+    + subtotal: Int
+    + discountAmount: Int
+    + <FK> promotionId: Int?
+    + ingredientsReserved: Boolean
+    + createdAt: DateTime
+    + updatedAt: DateTime
+  }
+
+  class OrderItem {
+    + <PK> id: Int
+    + <FK> orderId: Int
+    + <FK> productId: Int
+    + size: String?
+    + qty: Int
+    + lineTotal: Int
+  }
+
+  class Payment {
+    + <PK> id: Int
+    + <FK> orderId: Int
+    + amount: Int
+    + method: String
+    + status: String
+    + <UQ> idempotencyKey: String?
+    + createdAt: DateTime
+  }
+
+  class LoyaltyTransaction {
+    + <PK> id: Int
+    + <FK> userId: Int
+    + <UQ,FK> orderId: Int
+    + points: Int
+    + createdAt: DateTime
+  }
+
+}
+
+package "SẢN PHẨM VÀ NGUYÊN LIỆU" {
+  class Product {
+    + <PK> id: Int
+    + name: String
+    + price: Int
+    + imageUrl: String?
+    + stock: Int
+    + version: Int
+  }
+
+  class Ingredient {
+    + <PK> id: Int
+    + <UQ> name: String
+    + unit: String
+    + stock: Int
+    + version: Int
+  }
+
+  class RecipeItem {
+    + <PK> id: Int
+    + <FK> productId: Int
+    + <FK> ingredientId: Int
+    + size: String = DEFAULT
+    + quantity: Int
+  }
+
+  class ToppingRecipe {
+    + <PK> id: Int
+    + name: String
+    + <FK> ingredientId: Int
+    + quantity: Int
+  }
+
+  class OrderIngredient {
+    + <PK,FK> orderId: Int
+    + <PK,FK> ingredientId: Int
+    + quantity: Int
+  }
+
+}
+
+package "KHUYẾN MÃI" {
+  class Promotion {
+    + <PK> id: Int
+    + <UQ> code: String
+    + type: String
+    + value: Int
+    + maxDiscount: Int?
+    + minOrderAmount: Int
+    + startsAt: DateTime
+    + expiresAt: DateTime
+    + isActive: Boolean
+    + createdAt: DateTime
+  }
+
+}
+
+package "TRẠNG THÁI NGHIỆP VỤ" {
+ enum OrderStatusValue {
+   PENDING
+   PAID
+   PAYMENT_FAILED
+   PREPARING
+   READY
+   COMPLETED
+   CANCELLED
+ }
+}
+Order ..> OrderStatusValue : "status: String"
+
+User "1" -- "0..*" Order
+User "1" -- "0..*" LoyaltyTransaction
+Order "1" -- "0..*" OrderItem
+Order "1" -- "0..*" Payment
+Product "1" -- "0..*" OrderItem
+Promotion "0..1" -- "0..*" Order
+Order "1" -- "0..1" LoyaltyTransaction
+Product "1" -- "0..*" RecipeItem
+Ingredient "1" -- "0..*" RecipeItem
+Ingredient "1" -- "0..*" ToppingRecipe
+Order "1" -- "0..*" OrderIngredient
+Ingredient "1" -- "0..*" OrderIngredient
+
+@enduml
