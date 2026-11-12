@@ -34,10 +34,10 @@
 4. Điểm loyalty được cộng **chỉ khi đơn PAID**, không cộng trùng — **FR-10**
 5. Lịch sử đơn hàng được cập nhật, hiển thị trạng thái chi tiết cho khách — **FR-07, FR-08**
 6. Thông báo xác nhận hiển thị rõ mã đơn, tổng tiền, trạng thái — **FR-11** 
-7. Tồn kho nguyên liệu được trừ tương ứng trong cùng CSDL Transaction — **FR-05, NFR-05**
+7. Tồn kho nguyên liệu được **giữ khi tạo đơn PENDING, chỉ trừ vĩnh viễn khi đơn PAID** trong cùng CSDL Transaction — **FR-05, NFR-05**
 8. Giỏ hàng của khách hàng được tự động dọn sạch — **FR-03**
 | Hậu điều kiện — Thất bại | 
-1. Không tạo đơn hàng mới hoặc đánh dấu PAYMENT_FAILED — **FR-08**
+1. Đơn hàng tồn tại với trạng thái **PENDING / PAYMENT_FAILED** — **FR-08**
 2. Giữ nguyên trạng thái giỏ hàng, không tự xóa — **FR-11**
 3. Không áp dụng khuyến mãi, không trừ/cộng điểm — **FR-09, FR-10**
 4. Thông báo rõ nguyên nhân lỗi, hướng cách khắc phục — **FR-11, NFR-03**
@@ -54,7 +54,7 @@
 | 1 | Khách hàng | Truy cập trang thanh toán, xem lại giỏ hàng (sản phẩm, size/topping, tạm tính) | FR-03 |
 | 2 | Hệ thống | Kiểm tra phiên đăng nhập & JWT hợp lệ; thiếu/sai/hết hạn → trả 401 và dừng luồng | FR-04, NFR-02 |
 | 3 | Khách hàng | Nhập thông tin giao hàng, nhập mã khuyến mãi (nếu có) và nhấn "Đặt hàng" | FR-09 |
-| 4 | Hệ thống | Kiểm tra tồn kho nguyên liệu đủ cho toàn bộ sản phẩm trong đơn (sử dụng Database Transaction + Optimistic Lock) | FR-05, NFR-01, NFR-05 | 
+| 4 | Hệ thống | Kiểm tra tồn kho nguyên liệu đủ cho toàn bộ sản phẩm trong đơn (sử dụng Database Transaction + Optimistic Lock), **giữ/khóa kho khi tạo PENDING** | FR-05, NFR-01, NFR-05 | 
 | 5 | Hệ thống | Thẩm định khuyến mãi: kiểm tra hiệu lực, hạn dùng, điều kiện tối thiểu; tính giảm giá không vượt tổng đơn | FR-09 |
 | 6 | Khách hàng | Chọn phương thức thanh toán: **VNPay Sandbox** hoặc **Ví/Thẻ nội bộ (Mock)** | FR-06 | 
 | 7 | Hệ thống | Tạo đơn hàng trạng thái **PENDING**; tạo bản ghi Payment kèm **Idempotency-Key** để tránh giao dịch trùng | FR-05, FR-06 | 
@@ -62,7 +62,7 @@
 | 9 | Khách hàng | Xác nhận thông tin thanh toán và hoàn tất tại cổng | -- |
 | 10 | VNPay Sandbox / Mock | Trả về kết quả giao dịch; hệ thống **xác minh IPN: chữ ký, mã giao dịch, số tiền** trước khi cập nhật | FR-06, NFR-02 |
 | 11 | Hệ thống | Nếu kết quả = **"00" (Thành công)**:• Cập nhật Payment → PAID• Cập nhật Order → PAID• Xác nhận transaction CSDL | FR-05, FR-06, FR-08 |
-| 12 | Hệ thống | Trừ số lượng nguyên liệu tương ứng khỏi kho; tăng version bản ghi | FR-05, NFR-05 |
+| 12 | Hệ thống | Xác nhận **trừ vĩnh viễn** số lượng nguyên liệu đã giữ khỏi kho; tăng version bản ghi | FR-05, NFR-05 |
 | 13 | Hệ thống | Tính và cộng điểm loyalty; **chỉ cộng 1 lần khi PAID** — không cộng trùng khi IPN gọi lại | FR-10 |
 | 14 | Hệ thống | Tự động dọn sạch giỏ hàng; điều hướng đến trang xác nhận đơn hiển thị mã đơn, tổng tiền và điểm đã cộng | FR-03, FR-11 |
 
@@ -70,7 +70,7 @@
 | Mã | Xảy ra tại bước | Tình huống | Xử lý & Kết quả | Yêu cầu liên kết |
 |---|---|---|---|---|
 | ALT-01 | 5 | Mã khuyến mãi không hợp lệ / hết hạn / chưa đủ điều kiện | Thông báo "Mã khuyến mãi không khả dụng"; cho phép nhập lại hoặc bỏ qua → tiếp tục bước 6 | FR-09 |
-| ALT-02 | 6 | Khách hàng chọn thanh toán bằng điểm loyalty (nếu có chính sách) | Hệ thống tính quy đổi điểm thành tiền; nếu đủ điều kiện → hoàn tất đơn không qua cổng thanh toán ngoài; không tạo giao dịch VNPay | FR-06, FR-10 |
+| ALT-02 | 6 | Khách hàng chọn thanh toán qua Ví/Thẻ mô phỏng nội bộ (Mock Payment) thay vì VNPay Sandbox | hoàn tất đơn không qua cổng thanh toán ngoài; không tạo giao dịch VNPay | FR-06, FR-10 |
 | ALT-03 | 13 | Đơn PAID nhưng tài khoản chưa đủ điều kiện tích điểm | Ghi nhận đơn thành công; thông báo "Điểm chưa đủ điều kiện tích lũy"; không cộng điểm nhưng không làm thất bại đơn | FR-10 |
 
 ### 3.3 Luồng ngoại lệ
@@ -121,8 +121,7 @@
 - Thông báo rõ ràng nguyên nhân lỗi cho từng trường hợp
 
 ### ❌ Hệ thống **KHÔNG LÀM**
-- Không tạo đơn khi thanh toán chưa xác nhận thành công
-- Không trừ kho trước khi xác nhận thanh toán thành công
+- Không chuyển đơn sang trạng thái PAID khi chưa nhận được xác nhận hợp lệ từ cổng thanh toán
 - Không bán quá số lượng nguyên liệu trong kho
 - Không cập nhật PAID chỉ từ Return URL của VNPay
 - Không cộng điểm cho đơn PAYMENT_FAILED/PENDING
@@ -136,7 +135,7 @@
 | TC-1.3-01 | Đơn hợp lệ + áp dụng KM hợp lệ + thanh toán VNPay thành công | Đơn PAID, giảm giá đúng, kho trừ, điểm cộng, giỏ trống, hiển thị xác nhận |
 | TC-1.3-02 | 5 yêu cầu đặt cùng lúc, kho đủ cho 1 đơn | Chính xác 1 thành công, 4 bị từ chối an toàn, không có kho âm |
 | TC-1.3-03 | Nhập mã khuyến mãi sai/hết hạn | Thông báo lỗi, không áp dụng giảm giá, cho tiếp tục đặt hàng |
-| TC-1.3-04 | VNPay IPN trả thành công nhưng chữ ký sai | Đơn tồn tại, thông báo rõ, điểm cập nhật sau |
+| TC-1.3-04 | VNPay IPN trả thành công nhưng chữ ký sai | Từ chối cập nhật trạng thái (giữ nguyên PENDING), không cộng điểm loyalty, ghi log cảnh báo bảo mật |
 | TC-1.3-05 | Gửi cùng Idempotency-Key 2 lần cho cùng đơn | Lần 2 trả kết quả cũ/409, không tạo giao dịch trùng |
 | TC-1.3-06 | Khách hủy tại trang VNPay trước khi xác nhận | Đơn PAYMENT_FAILED, nguyên liệu hoàn trả, giỏ nguyên vẹn, có thể đặt lại | 
 | TC-1.3-07 | Token hết hạn khi đang ở bước thanh toán | Chuyển về /login, giỏ hàng được lưu, không mất dữ liệu |  

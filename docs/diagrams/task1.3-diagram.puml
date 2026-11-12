@@ -1,79 +1,60 @@
-@startuml Task1.3_Dat_ThanhToan_DonHang
-' ==============================
-' Task 1.3 – Use-Case: Đặt & Thanh Toán Đơn Hàng
-' BrewLite
-' ==============================
-
+@startuml Sơ đồ Use-Case: Đặt và Thanh Toán Đơn Hàng
+' ===================== CÀI ĐẶT & GIAO DIỆN =====================
 left to right direction
 skinparam useCase {
   BackgroundColor #f0f8ff
   BorderColor #2c3e50
-  FontName Arial
-  FontSize 11
 }
 skinparam actor {
   BackgroundColor #ecf0f1
   BorderColor #34495e
-  FontName Arial
-  FontSize 11
-}
-skinparam rectangle {
-  BackgroundColor #ffffff
-  BorderColor #2980b9
-  FontName Arial
-  FontSize 12
-}
-skinparam note {
-  BackgroundColor #fffef0
-  BorderColor #f39c12
-  FontName Arial
-  FontSize 10
 }
 
-' --- Actor ---
+' ===================== KHAI BÁO ACTOR =====================
 actor "Khách Hàng" as KH
+actor "VNPay Sandbox" as VNPay
 
-' --- Hệ thống nội bộ ---
+' ===================== KHỐI HỆ THỐNG BREWLITE =====================
 rectangle "BrewLite" {
-  (Đặt hàng & Thanh toán) as UC_MAIN
-  (Cập nhật tồn kho) as UC_STOCK
+  (Đặt hàng & Thanh toán\nUC-05) as UC05
+  (Đăng nhập\nUC-04) as UC04
+  (Cập nhật tồn kho) as UC_Stock
+  (Áp dụng mã giảm giá\nUC-04) as UC_Promo
+  (Cộng điểm thành viên) as UC_Loyalty
 }
 
-' --- Hệ thống bên ngoài ---
-rectangle "Hệ thống Bên Ngoài" {
-  (VNPay Sandbox) as VNP
-}
+' ===================== QUAN HỆ ACTOR ↔ USE-CASE =====================
+' Đường thẳng đơn — KHÔNG có mũi tên ✅
+KH -- UC05
+UC05 -- VNPay
 
-' --- Quan hệ ---
-KH -- UC_MAIN
+' ===================== QUAN HỆ <<INCLUDE>> =====================
+' Mũi tên nét đứt: CHÍNH → PHỤ ✅
+UC05 -[dashed]-> UC04 : <<include>>
+UC05 -[dashed]-> UC_Stock : <<include>>
 
-' include: Bắt buộc
-UC_MAIN -[dashed]-> UC_STOCK : <<include>>
+' ===================== QUAN HỆ <<EXTEND>> =====================
+' Mũi tên nét đứt: PHỤ → CHÍNH ✅
+UC_Promo -[dashed]-> UC05 : <<extend>>
+UC_Loyalty -[dashed]-> UC05 : <<extend>>
 
-' extend: Tùy chọn
-(Áp dụng mã giảm giá) -[dashed]-> UC_MAIN : <<extend>>
-(Cộng điểm thành viên) -[dashed]-> UC_MAIN : <<extend>>
-
-' Kết nối cổng thanh toán
-UC_MAIN --> VNP : Gọi & nhận phản hồi thanh toán
-
-' --- Ghi chú ---
-note top of UC_MAIN
-  **Kích hoạt**: Khách nhấn "Đặt hàng" tại trang Giỏ hàng
-end note
-
-note bottom of UC_MAIN
-  **Tiền điều kiện**:
+' ===================== GHI CHÚ =====================
+note left of UC05
+  **Tiền điều kiện:**
   • Đã đăng nhập / JWT hợp lệ
   • Giỏ hàng có sản phẩm hợp lệ
 end note
 
-note right of VNP
-  **Hậu điều kiện thành công**:
+note right of VNPay
+  **Hậu điều kiện thành công:**
   • Đơn PAID được tạo
   • Tồn kho được cập nhật
   • Thanh toán xác nhận
-  • Điểm được cộng (nếu đủ điều kiện)
+  • Điểm được cộng (đủ điều kiện)
+end note
+
+note bottom of UC05
+  **Kích hoạt:** Khách nhấn "Đặt hàng" tại trang Giỏ hàng
 end note
 
 @enduml
