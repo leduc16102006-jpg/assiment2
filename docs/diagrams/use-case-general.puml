@@ -3,7 +3,6 @@ left to right direction
 
 skinparam packageStyle rectangle
 skinparam shadowing false
-skinparam actorStyle awesome
 
 actor "Customer\n(Khách hàng)" as Customer
 actor "Barista / Staff\n(Nhân viên)" as Staff <<Outside MVP>>
@@ -29,6 +28,7 @@ rectangle "BrewLite System" {
         usecase "Đăng nhập" as UC09
         usecase "Thanh toán đơn hàng" as UC10
         usecase "Xử lý kết quả\nthanh toán" as UC11
+        usecase "Áp dụng mã\nkhuyến mãi" as UC16
     }
 
     package "Order Management" {
@@ -42,7 +42,6 @@ rectangle "BrewLite System" {
 Customer --> UC01
 Customer --> UC02
 Customer --> UC03
-Customer --> UC04
 Customer --> UC05
 Customer --> UC06
 Customer --> UC08
@@ -52,11 +51,13 @@ Customer --> UC12
 Customer --> UC13
 Customer --> UC14
 
+UC04 ..> UC03 : <<extend>>
 UC06 ..> UC07 : <<include>>
+UC06 ..> UC09 : <<include>>
 UC10 ..> UC11 : <<include>>
+UC16 ..> UC10 : <<extend>>
 
 Payment --> UC11
-
 Staff --> UC15
 
 note right of Staff
