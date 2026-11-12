@@ -1,0 +1,238 @@
+@startuml Task2.2_Sequence_Dat_ThanhToan_DonHang
+' ==================================================
+' Task 2.2 — Sequence Diagram: Đặt & Thanh Toán Đơn Hàng
+' Use-Case: UC-05 | BrewLite | Đồng bộ SRS Task 1.2 + Task 1.3 v1.2
+' Lifeline: Customer -> Next.js UI -> NestJS API -> PostgreSQL -> VNPay Sandbox
+'
+' Đồng bộ với SRS:
+'   [F1] POST /orders (tạo PENDING + giữ kho) tách khỏi POST /payments (Idempotency-Key)
+'   [F2] Optimistic Locking theo cột version (không FOR UPDATE)
+'   [F3] Bỏ API -> UI; Return URL + GET /orders/:id lấy trạng thái
+'   [F4] AC-05.3 tính giá server; AC-05.5 lưu userId/items/total
+'   [F5] AC-06.1/06.2/06.3 idempotency key; AC-06.5 verify merchant+amount; AC-06.6 callback lặp vô hại
+'   [F6] AC-06.7 Return URL chỉ hiển thị; AC-08.4 hoàn reserved đúng 1 lần
+'   [F7] AC-08.5 guard chặn khách PATCH trạng thái; FR-10 điểm theo config, chỉ PAID
+'   [F8] EX-09 scheduler hết hạn PENDING 15 phút; phạm vi dừng ở PAID/FAILED/CANCELLED
+' ==================================================
+
+skinparam participant {
+    BackgroundColor #f0f8ff
+    BorderColor #2c3e50
+    FontName Arial
+    FontSize 11
+}
+skinparam database {
+    BackgroundColor #e8f5e9
+    BorderColor #2e7d32
+    FontName Arial
+    FontSize 11
+}
+skinparam queue {
+    BackgroundColor #fdecea
+    BorderColor #c0392b
+    FontName Arial
+    FontSize 11
+}
+skinparam note {
+    BackgroundColor #fffef0
+    BorderColor #f39c12
+    FontName Arial
+    FontSize 9
+}
+skinparam arrow {
+    LineThickness 1.5
+    Color #2c3e50
+}
+skinparam group {
+    BackgroundColor #f8f8f8
+    BorderColor #bdc3c7
+}
+
+actor "Khách Hàng\n(Customer)" as Customer
+participant "Next.js UI\n(Frontend)" as UI
+participant "NestJS API\n(Backend)" as API
+database "PostgreSQL\n(Database)" as DB
+participant "VNPay Sandbox\n(Payment Gateway)" as PG
+queue "Scheduler\n(Job 15 phút)" as Sched
+
+autonumber
+
+note over Customer, PG
+  Task 2.2 — Sequence Diagram: Đặt & Thanh Toán Đơn Hàng (UC-05)
+  GĐ1 POST /orders: xác thực, tính giá server, giữ kho (Optimistic Lock), tạo PENDING
+  GĐ2 POST /payments: Idempotency-Key, sinh paymentUrl ký HMAC-SHA512
+  GĐ3 IPN xác minh -> Return URL -> GET /orders/:id (không push API -> UI)
+  Phạm vi UC-05 dừng ở PAID / PAYMENT_FAILED / CANCELLED
+end note
+
+== GĐ1: POST /orders — Xác thực, tính giá, giữ kho, tạo PENDING ==
+
+Customer -> UI: Nhấn "Đặt hàng" tại trang Giỏ hàng
+UI -> API: POST /orders\nAuthorization: Bearer JWT-token\n{ items, shippingNote?, promoCode? }
+
+alt JWT sai/hết hạn (EX-01) hoặc DTO sai (AC-05.2)
+    API --> UI: 401 Unauthorized / 400 Bad Request
+    UI --> Customer: Lưu giỏ tạm thời; chuyển /login hoặc báo lỗi dữ liệu; giỏ không mất
+else Hợp lệ
+    API -> DB: BEGIN TRANSACTION
+
+    API -> DB: SELECT giá món, phụ thu size/topping, cấu hình khuyến mãi
+    note over API
+      AC-05.3: tính lại đơn giá, phụ thu, giảm giá, tổng tiền từ server; không tin client
+    end note
+
+    API -> DB: SELECT id, stock, reserved, version\nFROM ingredients WHERE id IN (...)
+    note over API, DB
+      F2 Optimistic Locking: available = stock - reserved >= qty
+      Không dùng SELECT ... FOR UPDATE (khóa bi quan)
+    end note
+
+    alt Không đủ available (EX-02)
+        API -> DB: ROLLBACK
+        API --> UI: 400 — Sản phẩm không đủ hàng
+        UI --> Customer: Thông báo hết hàng; giữ nguyên giỏ; không tạo đơn
+    else Đủ nguyên liệu
+        API -> DB: UPDATE ingredients\nSET reserved = reserved + :qty,\nversion = version + 1\nWHERE id = :id AND version = :version
+        alt affected rows = 0 (xung đột phiên đồng thời, EX-02)
+            API -> DB: ROLLBACK
+            API --> UI: 409 Conflict — Nguyên liệu vừa được đặt trước
+            UI --> Customer: Thông báo "không đủ hàng hoặc đã được đặt trước"
+        else Giữ/chốt reserved thành công
+            alt Mã KM không hợp lệ (ALT-01) hoặc dịch vụ KM lỗi tạm (EX-04)
+                API --> UI: Cảnh báo mã không khả dụng / tạm thời; không áp giảm giá; cho tiếp tục
+            else Mã hợp lệ hoặc không dùng mã
+                note over API: Áp giảm giá hợp lệ, mức giảm không vượt tổng đơn (FR-09)
+            end
+            API -> DB: INSERT INTO orders (userId, status = 'PENDING', totalAmount, ...)
+            API -> DB: INSERT INTO order_items (orderId, productId, size, topping, qty, unitPrice)
+            API -> DB: COMMIT
+            API --> UI: 201 Created { orderId, status: PENDING, totalAmount }
+            UI --> Customer: Chuyển sang trang chọn phương thức thanh toán
+        end
+    end
+end
+
+== GĐ2: POST /payments — Idempotency-Key, sinh paymentUrl ==
+
+Customer -> UI: Chọn VNPay Sandbox, nhấn "Thanh toán"
+UI -> API: POST /payments/vnpay/create\nAuthorization: Bearer JWT-token\nIdempotency-Key: unique-key\n{ orderId }
+
+alt Thiếu Idempotency-Key (AC-06.1)
+    API --> UI: 400 Bad Request — thiếu Idempotency-Key
+else Có key
+    API -> DB: SELECT * FROM payments WHERE idempotencyKey = :key
+
+    alt Key đã tồn tại CÙNG orderId + phương thức (AC-06.2, EX-06)
+        API -> DB: SELECT payment theo idempotencyKey
+        API --> UI: 200 OK — Trả bản ghi payment cũ; không tạo giao dịch trùng
+    else Key đã tồn tại NHƯNG khác orderId/phương thức (AC-06.3)
+        API --> UI: 409 Conflict — Key không được dùng lại cho đơn/phương thức khác
+    else Chưa tồn tại
+        API -> DB: INSERT INTO payments (orderId, idempotencyKey, method, status = 'PENDING')
+        note over API
+          Ký URL thanh toán VNPay HMAC-SHA512 (vnp_SecureHash) — AC-06.5
+        end note
+        API --> UI: 201 Created { paymentId, paymentUrl }
+    end
+end
+
+== GĐ3: Cổng thanh toán, IPN, Return URL, GET trạng thái ==
+
+alt Phương thức: VNPay Sandbox
+    UI --> Customer: Chuyển hướng HTTP 302 tới paymentUrl của VNPay
+    Customer -> PG: Nhập thẻ/OTP và xác nhận thanh toán
+
+    alt Thanh toán THÀNH CÔNG (vnp_ResponseCode = "00")
+        PG -> API: POST /payments/vnpay/ipn\n{ vnp_ResponseCode=00, vnp_MerchantCode, vnp_TxnRef, vnp_Amount, vnp_SecureHash }
+        note over API
+          AC-06.5: xác minh HMAC-SHA512, merchant, mã giao dịch, số tiền, kết quả
+        end note
+
+        alt Chữ ký/merchant/số tiền KHÔNG khớp (EX-05)
+            API --> PG: 403 Forbidden
+            note over API
+              NFR-07: ghi log cảnh báo bảo mật, không in chữ ký/secret
+              DB không thay đổi; đơn giữ PENDING; không cộng điểm
+            end note
+        else IPN hợp lệ
+            API -> DB: BEGIN TRANSACTION
+            API -> DB: UPDATE payments SET status = 'PAID'\nWHERE idempotencyKey = :key AND status = 'PENDING'
+            API -> DB: UPDATE orders SET status = 'PAID'\nWHERE id = :orderId AND status = 'PENDING'
+            API -> DB: UPDATE ingredients SET stock = stock - :qty,\nreserved = reserved - :qty, version = version + 1\nWHERE id = :id AND version = :version
+            opt Đủ điều kiện tích điểm (FR-10, công thức theo config)
+                API -> DB: INSERT INTO loyalty_points (userId, orderId, points)
+            end
+            API -> DB: COMMIT
+            API --> PG: 200 OK — ACK IPN (không gọi ngược UI)
+            note over API
+              AC-06.6: IPN lặp lại không tạo thu/điểm/hoàn kho lặp
+              Điều kiện WHERE status = 'PENDING' đảm bảo chuyển trạng thái 1 lần
+            end note
+        end
+
+        note over API, UI
+          F3: API không đẩy dữ liệu xuống trình duyệt.
+          VNPay redirect Return URL; UI chủ động GET /orders/:id
+        end note
+        PG --> Customer: Redirect HTTP 302 Return URL\n/payment/return?orderId=...&vnp_ResponseCode=00
+        Customer -> UI: Mở Return URL trên trình duyệt
+        UI -> API: GET /orders/:id\nAuthorization: Bearer JWT-token
+        API -> DB: SELECT order, payment, loyalty point
+        API --> UI: 200 OK { status: PAID, totalAmount, pointsEarned }
+        UI --> Customer: Màn hình xác nhận: mã đơn, tổng tiền, điểm đã cộng (FR-11, NFR-03)
+        UI -> UI: Dọn giỏ hàng phía client (chỉ khi PAID)
+
+    else Thanh toán THẤT BẠI / Khách hủy (mã ≠ "00") (EX-03)
+        PG -> API: POST /payments/vnpay/ipn\n{ vnp_ResponseCode ≠ 00, vnp_SecureHash }
+        note over API: Xác minh chữ ký trước khi xử lý
+        API -> DB: BEGIN TRANSACTION
+        API -> DB: UPDATE orders SET status = 'PAYMENT_FAILED' / 'CANCELLED'\nWHERE id = :orderId AND status = 'PENDING'
+        API -> DB: UPDATE payments SET status = 'FAILED'\nWHERE idempotencyKey = :key
+        API -> DB: UPDATE ingredients SET reserved = reserved - :qty,\nversion = version + 1\nWHERE id = :id AND version = :version
+        note over DB
+          AC-08.4: hoàn reserved về kho ĐÚNG MỘT LẦN; không hoàn hai lần
+        end note
+        API -> DB: COMMIT
+        API --> PG: 200 OK — ACK IPN
+
+        PG --> Customer: Redirect HTTP 302 Return URL\n/payment/return?orderId=...&vnp_ResponseCode=..
+        Customer -> UI: Mở Return URL trên trình duyệt
+        UI -> API: GET /orders/:id\nAuthorization: Bearer JWT-token
+        API -> DB: SELECT order, payment
+        API --> UI: 200 OK { status: PAYMENT_FAILED/CANCELLED, reason }
+        UI --> Customer: Báo thất bại/hủy; giỏ giữ nguyên; cho thử lại/đổi phương thức (AC-03.5, NFR-03)
+    end
+
+else Phương thức: Ví/Thẻ nội bộ Mock Payment (ALT-02, AC-06.4)
+    UI -> API: POST /payments/mock\nAuthorization: Bearer JWT-token\nIdempotency-Key: unique-key\n{ orderId }
+    API -> DB: Kiểm tra Idempotency-Key; INSERT payments (status = PENDING)
+    API -> DB: BEGIN TRANSACTION\nCập nhật PAID; trừ kho; cộng điểm nếu đủ điều kiện; COMMIT
+    API --> UI: 200 OK { status: PAID }
+    UI --> Customer: Màn hình xác nhận thành công; dọn giỏ; không gọi cổng VNPay
+end
+
+== Bảo vệ quyền & nghiệp vụ nền ==
+
+note over Customer, API: 🔒 Bảo vệ quyền nghiệp vụ — Chặn khách đổi trạng thái đơn (AC-08.5, FR-08)
+
+UI -> API: PATCH /orders/:id/status { status: PAID }\nAuthorization: Bearer <JWT-token>
+note over API: Auth Guard + kiểm tra role\n→ Khách thường không có quyền thực hiện thao tác này
+API --> UI: 403 Forbidden — không đổi trạng thái đơn
+UI --> Customer: ⚠️ Thao tác không được phép\nTrạng thái đơn giữ nguyên
+
+== ⏰ Job Tự động Hết Hạn Đơn Hàng ==
+
+Sched -> API: Job 15 phút: quét orders PENDING quá hạn (EX-09)
+API -> DB: BEGIN TRANSACTION
+API -> DB: UPDATE orders SET status = 'PAYMENT_FAILED'\nWHERE status = 'PENDING' AND createdAt < now() - interval '15 minutes'
+API -> DB: UPDATE ingredients SET reserved = reserved - :qty,\nversion = version + 1\nWHERE id = :id AND version = :version
+API -> DB: COMMIT
+note over API, UI
+  EX-09: đơn PENDING quá 15 phút -> PAYMENT_FAILED + hoàn reserved đúng 1 lần.
+  EX-08: trang chờ thanh toán poll GET /orders/:id định kỳ; không push chủ động từ API.
+  Phạm vi UC-05 dừng ở PAID / PAYMENT_FAILED / CANCELLED;
+  PREPARING -> READY -> COMPLETED thuộc vai trò vận hành (FR-13 Future).
+end note
+
+
+@enduml
