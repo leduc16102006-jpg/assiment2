@@ -1,0 +1,60 @@
+@startuml Sơ đồ Use-Case: Đặt và Thanh Toán Đơn Hàng
+' ===================== CÀI ĐẶT & GIAO DIỆN =====================
+left to right direction
+skinparam useCase {
+  BackgroundColor #f0f8ff
+  BorderColor #2c3e50
+}
+skinparam actor {
+  BackgroundColor #ecf0f1
+  BorderColor #34495e
+}
+
+' ===================== KHAI BÁO ACTOR =====================
+actor "Khách Hàng" as KH
+actor "VNPay Sandbox" as VNPay
+
+' ===================== KHỐI HỆ THỐNG BREWLITE =====================
+rectangle "BrewLite" {
+  (Đặt hàng & Thanh toán\nUC-05) as UC05
+  (Đăng nhập\nUC-04) as UC04
+  (Cập nhật tồn kho) as UC_Stock
+  (Áp dụng mã giảm giá\nUC-07) as UC_Promo
+  (Cộng điểm thành viên) as UC_Loyalty
+}
+
+' ===================== QUAN HỆ ACTOR ↔ USE-CASE =====================
+' Đường thẳng đơn — KHÔNG có mũi tên ✅
+KH -- UC05
+UC05 -- VNPay
+
+' ===================== QUAN HỆ <<INCLUDE>> =====================
+' Mũi tên nét đứt: CHÍNH → PHỤ ✅
+UC05 -[dashed]-> UC04 : <<include>>
+UC05 -[dashed]-> UC_Stock : <<include>>
+
+' ===================== QUAN HỆ <<EXTEND>> =====================
+' Mũi tên nét đứt: PHỤ → CHÍNH ✅
+UC_Promo -[dashed]-> UC05 : <<extend>>
+UC_Loyalty -[dashed]-> UC05 : <<extend>>
+
+' ===================== GHI CHÚ =====================
+note left of UC05
+  **Tiền điều kiện:**
+  • Đã đăng nhập / JWT hợp lệ
+  • Giỏ hàng có sản phẩm hợp lệ
+end note
+
+note right of VNPay
+  **Hậu điều kiện thành công:**
+  • Đơn PAID được tạo
+  • Tồn kho được cập nhật
+  • Thanh toán xác nhận
+  • Điểm được cộng (đủ điều kiện)
+end note
+
+note bottom of UC05
+  **Kích hoạt:** Khách nhấn "Đặt hàng" tại trang Giỏ hàng
+end note
+
+@enduml
