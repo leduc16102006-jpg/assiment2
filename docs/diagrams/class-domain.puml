@@ -137,7 +137,7 @@ Order ..> OrderStatusValue : "status: String"
 
 User "1" -- "0..*" Order
 User "1" -- "0..*" LoyaltyTransaction
-Order "1" -- "0..*" OrderItem
+Order "1" -- "1..*" OrderItem
 Order "1" -- "0..*" Payment
 Product "1" -- "0..*" OrderItem
 Promotion "0..1" -- "0..*" Order
