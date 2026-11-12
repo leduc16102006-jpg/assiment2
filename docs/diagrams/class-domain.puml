@@ -31,7 +31,7 @@ package "TÀI KHOẢN, ĐƠN HÀNG VÀ THANH TOÁN" {
     + subtotal: Int
     + discountAmount: Int
     + <FK> promotionId: Int?
-    + ingredientsReserved: Boolean
+    
     + createdAt: DateTime
     + updatedAt: DateTime
   }
@@ -80,6 +80,7 @@ package "SẢN PHẨM VÀ NGUYÊN LIỆU" {
     + <UQ> name: String
     + unit: String
     + stock: Int
+    + reserved: Int = 0
     + version: Int
   }
 
