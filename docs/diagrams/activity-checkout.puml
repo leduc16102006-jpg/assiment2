@@ -34,7 +34,8 @@ start
 :Thêm sản phẩm vào giỏ hàng;
 
 |Frontend|
-:Cập nhật và lưu thông tin giỏ hàng;
+:Cập nhật CartContext;
+:Lưu giỏ hàng vào localStorage;
 
 |Customer|
 :Truy cập giỏ hàng;
@@ -50,7 +51,7 @@ if (Có mã khuyến mãi?) then (Có)
     :Nhập mã giảm giá;
 
     |Frontend|
-    :Ghi nhận mã khuyến mãi;
+    :Ghi nhận promotionCode;
 else (Không)
     |Frontend|
     :Tiếp tục không áp dụng mã;
@@ -60,16 +61,16 @@ endif
 :Nhấn xác nhận đặt hàng;
 
 |Frontend|
-if (Khách hàng đã đăng nhập?) then (Có)
+if (JWT Token hợp lệ?) then (Có)
     :Tiếp tục quy trình đặt hàng;
 else (Không)
-    :Chuyển hướng đến trang đăng nhập;
+    :Chuyển hướng đến /login;
 
     |Customer|
     :Nhập email và mật khẩu;
 
     |Frontend|
-    :Gửi yêu cầu đăng nhập;
+    :Gửi POST /auth/login;
 
     |Backend|
     :Xác thực thông tin đăng nhập;
@@ -82,22 +83,24 @@ else (Không)
         :Nhập lại thông tin đăng nhập;
 
         |Frontend|
-        :Gửi lại yêu cầu đăng nhập;
+        :Gửi lại POST /auth/login;
 
         |Backend|
         :Xác thực lại thông tin đăng nhập;
     endwhile (Không)
 
+    :Trả về JWT Access Token;
+
     |Frontend|
-    :Thông báo đăng nhập thành công;
-    :Quay lại trang giỏ hàng;
+    :Lưu JWT Access Token;
+    :Quay lại /cart;
 
     |Customer|
     :Nhấn xác nhận đặt hàng;
 endif
 
 |Frontend|
-:Gửi yêu cầu tạo đơn hàng;
+:Gửi POST /orders\n(items, promotionCode, Bearer JWT);
 
 |Backend|
 :Kiểm tra mã khuyến mãi (nếu có);
@@ -105,6 +108,7 @@ endif
 
 while (Tồn kho không đủ?) is (Có)
     |Frontend|
+    :Nhận HTTP 400 - Out of Stock;
     :Hiển thị banner vàng cảnh báo;
     :Giữ nguyên giỏ hàng;
 
@@ -113,7 +117,7 @@ while (Tồn kho không đủ?) is (Có)
     :Xác nhận đặt hàng lại;
 
     |Frontend|
-    :Gửi lại yêu cầu tạo đơn hàng;
+    :Gửi lại POST /orders;
 
     |Backend|
     :Kiểm tra mã khuyến mãi (nếu có);
@@ -122,47 +126,78 @@ endwhile (Không)
 
 |Backend|
 :Tạo đơn hàng với trạng thái PENDING;
+:Giữ tồn kho cho đơn hàng;
 :Trả kết quả tạo đơn thành công;
 
+|Frontend|
+:Nhận thông tin đơn hàng PENDING;
+
 |Customer|
-:Chọn thanh toán qua VNPay;
+:Chọn phương thức thanh toán\n(VNPay / Ví-Thẻ Mock);
 
 |Frontend|
 :Gửi yêu cầu tạo thanh toán;
 
+if (Phương thức thanh toán?) then (VNPay)
+    |Backend|
+    :Khởi tạo yêu cầu thanh toán VNPay;
+    :Trả về URL thanh toán;
+
+    |Frontend|
+    :Chuyển hướng đến VNPay Sandbox;
+
+    |Payment Service|
+    :Hiển thị giao diện VNPay Sandbox;
+
+    |Customer|
+    :Thực hiện hoặc hủy thanh toán;
+
+    |Payment Service|
+    :Trả kết quả giao dịch;
+else (Ví / Thẻ Mock)
+    |Backend|
+    :Khởi tạo yêu cầu thanh toán mô phỏng;
+
+    |Payment Service|
+    :Hiển thị giao diện thanh toán Mock;
+
+    |Customer|
+    :Xác nhận hoặc hủy giao dịch mô phỏng;
+
+    |Payment Service|
+    :Trả kết quả giao dịch mô phỏng;
+endif
+
 |Backend|
-:Khởi tạo yêu cầu thanh toán;
-:Trả về đường dẫn thanh toán;
+:Tiếp nhận và xử lý kết quả thanh toán;
 
-|Frontend|
-:Chuyển hướng đến VNPay Sandbox;
-
-|VNPay Sandbox|
-:Hiển thị giao diện thanh toán;
-
-|Customer|
-:Thực hiện hoặc hủy thanh toán;
-
-|VNPay Sandbox|
-:Trả kết quả giao dịch;
-
-|Backend|
-:Xử lý kết quả thanh toán;
-
-|Frontend|
 if (Thanh toán thành công?) then (Có)
-    :Hiển thị màn hình xác nhận đơn hàng;
+    |Backend|
+    :Cập nhật đơn hàng PAID;
+    :Cộng điểm Loyalty cho khách hàng;
+
+    |Frontend|
+    :Gọi clearCart() để xóa giỏ hàng;
+    :Hiển thị trang /order-confirmation;
     :Hiển thị mã đơn và trạng thái PAID;
 
     |Customer|
     :Xem thông tin xác nhận đơn hàng;
+    :Có thể theo dõi đơn tại /orders;
+
 else (Không / Hủy)
+    |Backend|
+    :Cập nhật đơn hàng PAYMENT_FAILED;
+    :Hoàn trả tồn kho đã giữ;
+
     |Frontend|
     :Hiển thị thông báo thanh toán thất bại;
-    :Giữ nguyên thông tin giỏ hàng;
+    :Giữ nguyên giỏ hàng;
+    :Điều hướng về /cart;
 
     |Customer|
-    :Quay lại giỏ hàng;
+    :Xem thông báo lỗi;
+    :Có thể chọn thanh toán lại;
 endif
 
 stop
