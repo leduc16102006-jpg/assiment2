@@ -1,8 +1,8 @@
 # Task 1.2 — Đặc tả yêu cầu phần mềm (SRS)
 
-**Dự án:** BrewLite — Assignment 2: Requirements to Deployment  
+**Dự án:** BrewLite — Assignment 2: Requirements to Deployment
 **Ngày:** 11/11/2026
-**Công nghệ bắt buộc:** Next.js, NestJS, PostgreSQL  
+**Công nghệ bắt buộc:** Next.js, NestJS, PostgreSQL
 **Mục đích:** Đặc tả yêu cầu chức năng (FR), phi chức năng (NFR), ưu tiên MoSCoW, tiêu chí chấp nhận và sơ đồ use-case tổng quát.
 
 ## 1. Bối cảnh, phạm vi và tác nhân
@@ -12,7 +12,7 @@ BrewLite hỗ trợ quy trình **xem menu → xem chi tiết và chọn size/top
 | Tác nhân | Trách nhiệm | Phạm vi |
 |---|---|---|
 | **Khách hàng (Customer)** | Xem menu, tùy chọn món, giỏ hàng, đăng ký/đăng nhập, đặt/thanh toán, xem lịch sử | Trong MVP |
-| **VNPay Sandbox (Payment Gateway)** | Thực hiện giao dịch VNPay và phản hồi trạng thái cho BrewLite |
+| **VNPay Sandbox (Payment Gateway)** | Thực hiện giao dịch VNPay và phản hồi trạng thái cho BrewLite |Trong MVP |
 | **Barista / Nhân viên quầy** | Tiếp nhận đơn, cập nhật trạng thái pha chế qua giao diện có phân quyền | **Future / Out-of-scope for MVP** — chưa được triển khai |
 
 ### 1.1. Phân loại MoSCoW
@@ -37,6 +37,8 @@ Hệ thống hiển thị menu dạng lưới, có tên món, hình ảnh, giá 
 | AC-01.1 | Menu hiển thị đúng tên, hình, giá cơ bản từ dữ liệu API; tải danh sách thành công qua `GET /products`. |
 | AC-01.2 | Tìm kiếm tên và lọc danh mục hoạt động với dữ liệu có sẵn; không có kết quả sẽ thể hiện trạng thái rỗng. |
 | AC-01.3 | Trong khi tải hiển thị loading/skeleton; API lỗi có thông báo và khả năng thử lại, không để trang trắng. |
+| AC-01.4	| Trong khi dữ liệu menu đang tải, giao diện hiển thị trạng thái Loading dạng Skeleton. |
+| AC-01.5	| Khi không tìm thấy sản phẩm phù hợp với từ khóa hoặc danh mục đã chọn, giao diện hiển thị thông báo "Không có sản phẩm". |
 
 ### FR-02 — Xem chi tiết và tùy biến món
 
@@ -47,8 +49,8 @@ Khách xem chi tiết món, chọn size S/M/L, topping và thấy tổng giá t�
 | AC | Tiêu chí nghiệm thu có thể kiểm tra |
 |---|---|
 | AC-02.1 | Chi tiết sản phẩm hợp lệ hiển thị thông tin đúng; sản phẩm không tồn tại được báo lỗi/404. |
-| AC-02.2 | Người dùng chọn được size S/M/L và các topping hợp lệ theo dữ liệu sản phẩm. |
-| AC-02.3 | Giá tạm tính cập nhật theo size, topping và số lượng trước khi bấm thêm vào giỏ. |
+| AC-02.2	| Người dùng chọn được Size S/M/L và nhiều Topping hợp lệ. Size S không phụ thu, Size M phụ thu 5.000 VNĐ, Size L phụ thu 10.000 VNĐ; Trân châu phụ thu 7.000 VNĐ và Cream Cheese phụ thu 10.000 VNĐ. |
+| AC-02.3	| Giá tạm tính cập nhật ngay khi người dùng thay đổi Size hoặc thêm/bỏ Topping, không cần tải lại trang. |
 | AC-02.4 | Backend xác minh lại cấu hình món và giá khi tạo đơn; không chấp nhận giá do client tự sửa. |
 
 ### FR-03 — Quản lý giỏ hàng
@@ -60,6 +62,8 @@ Khách xem chi tiết món, chọn size S/M/L, topping và thấy tổng giá t�
 | AC-03.1 | Khách thêm món với size/topping, điều chỉnh số lượng và xóa dòng món. |
 | AC-03.2 | Tổng tạm tính và số lượng trên biểu tượng giỏ cập nhật ngay khi giỏ thay đổi. |
 | AC-03.3 | Giỏ rỗng không được đặt đơn; dữ liệu giỏ được bảo toàn khi người dùng xử lý lỗi thanh toán theo chính sách UI. |
+| AC-03.4	| Khi giỏ hàng không có sản phẩm, giao diện hiển thị trạng thái giỏ hàng trống và hướng dẫn khách hàng quay lại Menu để chọn món. |
+| AC-03.5	| Khi thanh toán thất bại hoặc bị hủy, giao diện không tự động xóa giỏ hàng; khách hàng có thể quay lại giỏ hàng để thử lại. |
 
 ### FR-04 — Xác thực và quản lý tài khoản
 
@@ -115,6 +119,8 @@ Thanh toán hỗ trợ Ví/Thẻ **VNPay Sandbox**. Sử dụng `Idempotency-Key
 | AC-07.1 | Khách đã đăng nhập xem được danh sách đơn của chính mình, hiển thị mã, ngày, tổng tiền, trạng thái và chi tiết. |
 | AC-07.2 | Người dùng A không đọc được đơn của B; API không tiết lộ dữ liệu đơn của người khác (403/404 theo chính sách). |
 | AC-07.3 | Đơn mới hiển thị trạng thái `PENDING`; sau thanh toán, trạng thái được đồng bộ từ backend. |
+| AC-07.4	| Khi khách hàng chọn một đơn hàng, giao diện hiển thị chi tiết sản phẩm, Size, Topping, số lượng, đơn giá và tổng tiền. |
+| AC-07.5	| Khi khách hàng chưa có đơn hàng nào, giao diện hiển thị thông báo phù hợp thay vì để danh sách trống không có giải thích. |
 
 ### FR-08 — Quản lý trạng thái đơn và hoàn kho
 
@@ -129,7 +135,8 @@ Thanh toán hỗ trợ Ví/Thẻ **VNPay Sandbox**. Sử dụng `Idempotency-Key
 | AC-08.5 | Khách thường không thể tự gọi API vận hành để chuyển thành `PAID`, `PREPARING`, `READY`, `COMPLETED`; phải có guard/role hoặc cơ chế bảo vệ tương đương và test.|
 | AC-08.6 | Thay đổi trạng thái do VNPay chỉ được thực hiện sau khi backend kiểm tra callback hợp lệ; không nhận trạng thái `PAID` trực tiếp từ request client. |
 
-
+| Mã | Yêu cầu chức năng | Mức ưu tiên | Tiêu chí chấp nhận (AC) |
+|---|---|---|---|
 | **FR-09** | **Khuyến mãi** | **MoSCoW:** **Must** | Mã được kiểm tra hiệu lực, mức giảm, hạn dùng và điều kiện tối thiểu ở backend; mức giảm không vượt tổng đơn. |
 | **FR-10** | **Tích điểm khách hàng** | **MoSCoW:** **Must** | Chỉ cộng điểm khi đơn `PAID`; giao dịch trùng/IPN lặp không cộng lần nữa. Công thức điểm được lưu tài liệu/config theo dự án. |
 | **FR-11** | **Xác nhận đơn và phản hồi lỗi** | **MoSCoW:** **Must** | Sau thanh toán thành công hiển thị mã đơn, tổng tiền, trạng thái từ backend; lỗi được báo rõ, không tự xóa giỏ vì thanh toán thất bại. |
@@ -138,7 +145,7 @@ Thanh toán hỗ trợ Ví/Thẻ **VNPay Sandbox**. Sử dụng `Idempotency-Key
 
 ## 3. Yêu cầu phi chức năng (NFR)
 
-### NFR-01 — Hiệu năng và khả năng xử lý đồng thời (phần E)
+### NFR-01 — Hiệu năng và khả năng xử lý đồng thời 
 
 **MoSCoW:** **Must**.
 
@@ -148,7 +155,7 @@ Thanh toán hỗ trợ Ví/Thẻ **VNPay Sandbox**. Sử dụng `Idempotency-Key
 | AC-NFR-01.2 | Test có 5 request tranh chấp lượng nguyên liệu chỉ đủ 1 đơn: đúng 1 thành công, 4 từ chối an toàn; không có stock âm hoặc đơn vượt kho. |
 | AC-NFR-01.3 | Xung đột optimistic lock/transaction trả phản hồi lỗi có cấu trúc, không lưu bản ghi dang dở. |
 
-### NFR-02 — Bảo mật hệ thống (phần E)
+### NFR-02 — Bảo mật hệ thống 
 
 **MoSCoW:** **Must**.
 
@@ -169,6 +176,8 @@ Thanh toán hỗ trợ Ví/Thẻ **VNPay Sandbox**. Sử dụng `Idempotency-Key
 | AC-NFR-03.1 | Ở viewport 375×812 và 390×844 px, luồng menu → chi tiết → giỏ → thanh toán → xác nhận không tràn/che nội dung quan trọng. |
 | AC-NFR-03.2 | UI có thông báo rỗng/loading/lỗi, nút thao tác rõ ràng; khi hết hàng/thanh toán lỗi người dùng biết cách sửa/thử lại. |
 | AC-NFR-03.3 | Tương thích trình duyệt hiện đại được nhóm lựa chọn; nếu phát triển PWA, cần manifest/icon và kiểm thử cài đặt, chưa có thì không tuyên bố đạt PWA. |
+| AC-NFR-03.4	| Ứng dụng hỗ trợ khả năng cài đặt dưới dạng PWA trên trình duyệt và thiết bị tương thích. Việc nghiệm thu cần kiểm tra manifest, icon và khả năng cài đặt thực tế. |
+| AC-NFR-03.5	| Các chức năng chính được kiểm thử trên Google Chrome và Microsoft Edge, đảm bảo giao diện và thao tác hoạt động ổn định trên cả hai trình duyệt. |
 
 ### NFR-04 — Khả năng triển khai và tái tạo môi trường
 
@@ -195,7 +204,6 @@ Thanh toán hỗ trợ Ví/Thẻ **VNPay Sandbox**. Sử dụng `Idempotency-Key
 ![Sơ đồ Use-case tổng quát BrewLite](../diagrams/use-case-general.svg)
 
 - [PlantUML – use-case-general.puml](../diagrams/use-case-general.puml)
-- [draw.io – use-case-general.drawio](../diagrams/use-case-general.drawio)
 - [SVG – use-case-general.svg](../diagrams/use-case-general.svg)
 
 **Actors:** Khách hàng (chính), VNPay Sandbox (hệ thống ngoài), **Barista/Nhân viên quầy (Future / Out-of-scope for MVP)**.

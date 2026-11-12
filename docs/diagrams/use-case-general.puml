@@ -1,57 +1,55 @@
-@startuml
-' BrewLite Task 1.2 — Use-case tổng quát (theo phân công D + E)
+@startuml UseCaseGeneral
 left to right direction
 skinparam monochrome true
 skinparam shadowing false
 skinparam backgroundColor white
 skinparam defaultFontName "DejaVu Sans"
 skinparam roundCorner 0
-skinparam linetype ortho
 skinparam packageStyle rectangle
-header Task 1.2
-title SƠ ĐỒ USE-CASE TỔNG QUÁT
 
-actor "Khách hàng" as Customer
+header Task 1.2
+title SƠ ĐỒ USE-CASE TỔNG QUÁT - BREWLITE
+
+actor "Khách hàng\n(Customer)" as Customer
 actor "Barista / Nhân viên quầy\n(Future)" as Barista
 actor "VNPay Sandbox\n«external system»" as Gateway
 
 rectangle "HỆ THỐNG BREWLITE" {
-  usecase "Xem menu" as Menu
-  usecase "Xem chi tiết món" as Detail
-  usecase "Chọn size / topping" as Options
-  usecase "Quản lý giỏ hàng" as CartS
-  usecase "Đăng ký tài khoản" as Register
-  usecase "Đăng nhập" as Login
-  usecase "Đặt hàng & Thanh toán" as Checkout
-  usecase "Xem lịch sử / trạng thái đơn" as History
-  usecase "Áp dụng mã giảm giá" as Promotion
-  usecase "Xử lý thanh toán" as Payment
+  usecase "UC-01: Xem menu &\ntìm kiếm đồ uống" as UC01
+  usecase "UC-02: Xem chi tiết &\nchọn size/topping" as UC02
+  usecase "UC-03: Quản lý giỏ hàng" as UC03
+  usecase "UC-04: Đăng ký /\nĐăng nhập" as UC04
+  usecase "UC-05: Đặt hàng &\nThanh toán" as UC05
+  usecase "UC-06: Xem lịch sử /\ntrạng thái đơn" as UC06
+  usecase "UC-07: Áp dụng\nmã giảm giá" as UC07
+  usecase "UC-08: Xử lý thanh toán" as UC08
 
   package "Future / Out-of-scope for MVP" {
-    usecase "Tiếp nhận đơn" as Accept
-    usecase "Cập nhật trạng thái pha chế" as Prepare
+    usecase "UC-09: Tiếp nhận đơn" as UC09
+    usecase "UC-10: Cập nhật trạng thái\npha chế" as UC10
   }
 }
 
-Customer -- Menu
-Customer -- Detail
-Customer -- Options
-Customer -- Cart
-Customer -- Register
-Customer -- Login
-Customer -- Checkout
-Customer -- History
+Customer -- UC01
+Customer -- UC02
+Customer -- UC03
+Customer -- UC04
+Customer -- UC05
+Customer -- UC06
 
-Detail ..> Menu : <<extend>>
-Checkout ..> Login : <<include>>
-Promotion ..> Checkout : <<extend>>
-Checkout ..> Payment : <<include>>
-Gateway -- Payment
-Barista -- Accept
-Barista -- Prepare
+UC02 ..> UC01 : <<extend>>
+UC05 ..> UC04 : <<include>>
+UC05 ..> UC08 : <<include>>
+UC07 ..> UC05 : <<extend>>
 
-note right of Payment
-  VNPay là hệ thống ngoài khi chọn phương thức VNPay.
-  Ví/Thẻ giả lập được xử lý nội bộ.
+Gateway -- UC08
+Barista -- UC09
+Barista -- UC10
+
+note right of UC08
+  VNPay Sandbox chỉ được gọi
+  khi chọn phương thức VNPay.
+  Ví/Thẻ mô phỏng xử lý nội bộ.
 end note
+
 @enduml
