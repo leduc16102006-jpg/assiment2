@@ -83,6 +83,8 @@
 | EX-05 | 10 | VNPay IPN trả thành công nhưng chữ ký HMAC-SHA512/số tiền không khớp | Bỏ qua cập nhật trạng thái; ghi log cảnh báo; không thay đổi đơn/thanh toán; không gọi hoàn tiền tự động | FR-06, NFR-02 |
 | EX-06 | 7 | Gửi Idempotency-Key trùng cho cùng đơn & phương thức | Trả kết quả giao dịch cũ hoặc lỗi 409; không tạo giao dịch trùng; không cộng điểm hai lần | FR-06 |
 | EX-07 | 11-12 | Lỗi CSDL sau khi VNPay xác nhận nhưng trước khi commit | Rollback toàn bộ transaction; gọi hoàn tiền qua VNPay nếu cần; hoàn trả nguyên liệu; thông báo lỗi hệ thống; ghi log chi tiết | FR-05, NFR-05
+| EX-08 | 9–10 | Mạng gián đoạn / không nhận được phản hồi VNPay quá 30 giây | Thông báo "Đang xử lý, vui lòng chờ hoặc kiểm tra lịch sử đơn hàng"; hệ thống tiếp tục kiểm tra trạng thái sau đó; không tự đánh dấu thất bại ngay | FR-06, NFR-01
+| EX-09 | 7–10 | Đơn ở trạng thái PENDING quá 15 phút không thanh toán | Tự động chuyển PAYMENT_FAILED; hoàn trả nguyên liệu về kho; gửi thông báo đơn hết hạn | FR-05, FR-08
 
 ---
 
