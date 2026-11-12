@@ -19,7 +19,7 @@ rectangle "BrewLite" {
   (Đặt hàng & Thanh toán\nUC-05) as UC05
   (Đăng nhập\nUC-04) as UC04
   (Cập nhật tồn kho) as UC_Stock
-  (Áp dụng mã giảm giá\nUC-04) as UC_Promo
+  (Áp dụng mã giảm giá\nUC-07) as UC_Promo
   (Cộng điểm thành viên) as UC_Loyalty
 }
 
