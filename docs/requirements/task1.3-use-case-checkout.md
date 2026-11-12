@@ -2,7 +2,7 @@
 ## Tên Use-Case: Đặt và Thanh Toán Đơn Hàng
 **Hệ thống**: BrewLite  
 **Phiên bản**: 1.0  
-**Ngày**: 09/11/2026
+**Ngày**: 12/11/2026
 
 ---
 
@@ -53,7 +53,7 @@
 |---|---|---|---|
 | 1 | Khách hàng | Truy cập trang thanh toán, xem lại giỏ hàng (sản phẩm, size/topping, tạm tính) | FR-03 |
 | 2 | Hệ thống | Kiểm tra phiên đăng nhập & JWT hợp lệ; thiếu/sai/hết hạn → trả 401 và dừng luồng | FR-04, NFR-02 |
-| 3 | Khách hàng | Nhập thông tin giao hàng, nhập mã khuyến mãi (nếu có) và nhấn "Đặt hàng" | FR-09 |
+| 3 | Khách hàng | Nhập ghi chú đơn hàng (nếu có), nhập mã khuyến mãi (nếu có) | FR-09 |
 | 4 | Hệ thống | Kiểm tra tồn kho nguyên liệu đủ cho toàn bộ sản phẩm trong đơn (sử dụng Database Transaction + Optimistic Lock), **giữ/khóa kho khi tạo PENDING** | FR-05, NFR-01, NFR-05 | 
 | 5 | Hệ thống | Thẩm định khuyến mãi: kiểm tra hiệu lực, hạn dùng, điều kiện tối thiểu; tính giảm giá không vượt tổng đơn | FR-09 |
 | 6 | Khách hàng | Chọn phương thức thanh toán: **VNPay Sandbox** hoặc **Ví/Thẻ nội bộ (Mock)** | FR-06 | 
