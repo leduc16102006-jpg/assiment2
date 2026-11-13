@@ -1,0 +1,68 @@
+@startuml C4_Backend_Component_BrewLite
+' ==================================================
+' C4 Component Diagram — BrewLite NestJS Backend
+' Task 3 (Nhánh docs/task-3-arch-backend)
+' Tiêu chí: truy vết mỗi component -> đường dẫn mã nguồn, bảng DB,
+'           container deployment (docker-compose) và mã yêu cầu SRS
+' ==================================================
+
+!if %variable_exists("RELATIVE_INCLUDE")
+  !include ./c4lib/C4_Component.puml
+!else
+  !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+!endif
+
+LAYOUT_WITH_LEGEND()
+title C4 Component — BrewLite NestJS Backend (UC-05 / FR-05, FR-06, FR-08, FR-10)
+
+' ===== Tác nhân & hệ thống bên ngoài =====
+Person_Ext(customer, "Khách Hàng", "Đặt hàng, thanh toán, xem lịch sử")
+Container_Ext(frontend, "Next.js Web App", "Next.js 14 / React", "Deployment: container web (docker-compose)\nGọi REST API, poll GET /orders/:id")
+Container_Ext(vnpay, "VNPay Sandbox", "Payment Gateway ngoài", "Deployment: dịch vụ bên thứ 3\nTạo giao dịch, gọi IPN /vnpay/ipn")
+ContainerDb_Ext(postgres, "PostgreSQL", "PostgreSQL 16", "Deployment: container db (docker-compose)\nCSDL quan hệ toàn hệ thống")
+
+' ===== Ranh giới container trong phạm vi: NestJS API =====
+Container_Boundary(nestjs, "NestJS API — container api (docker-compose)", "NestJS 10 / Node.js 20 · Modular Monolith (ADR-003)") {
+    Component(auth, "Auth Module", "src/auth/", "auth.controller.ts · auth.service.ts\njwt.strategy.ts · jwt-auth.guard.ts · roles.guard.ts\nBảng: users | FR-04, NFR-02")
+    Component(products, "Products Module", "src/products/", "products.controller.ts · products.service.ts\nBảng: products, ingredients, toppings | FR-01, FR-02")
+    Component(cart, "Cart Module", "src/cart/", "cart.controller.ts · cart.service.ts\nGiỏ theo session/Redis | FR-03")
+    Component(orders, "Orders Module", "src/orders/", "orders.controller.ts · orders.service.ts\norder.entity.ts · order-item.entity.ts\nState Machine + Optimistic Lock (ingredients.version)\nBảng: orders, order_items, ingredients | FR-05, FR-08")
+    Component(payments, "Payment Module", "src/payments/", "payments.controller.ts · vnpay.service.ts\nidempotency.service.ts · ipn.controller.ts\nBảng: payments (UNIQUE idempotencyKey) | FR-06, AC-06.1…06.7")
+    Component(promo, "Promotion Module", "src/promotions/", "coupon.service.ts\nBảng: coupons | FR-09")
+    Component(loyalty, "Loyalty Module", "src/loyalty/", "loyalty-point.service.ts\nBảng: loyalty_points | FR-10")
+    Component(config, "Config Module", "src/config/", "@nestjs/config; secrets từ biến môi trường\nJWT secret, VNPay TmnSecret | NFR-02, NFR-04")
+    Component(common, "Common / Shared", "src/common/", "JwtAuthGuard · RolesGuard · ValidationPipe\nExceptionFilter · Interceptors | NFR-02, NFR-07")
+    Component(scheduler, "Scheduler Module", "src/scheduler/", "orders-expiry.job.ts (@nestjs/schedule)\nJob 15 phút: PENDING quá hạn -> PAYMENT_FAILED + hoàn reserved | EX-09")
+}
+
+' ===== Quan hệ: Frontend -> Module =====
+Rel(customer, frontend, "Sử dụng")
+Rel(frontend, auth, "POST /auth/register, /login; GET /auth/me")
+Rel(frontend, products, "GET /products; GET /products/:id")
+Rel(frontend, cart, "Thêm/sửa/xóa giỏ hàng")
+Rel(frontend, orders, "POST /orders; GET /orders/me; GET /orders/:id")
+Rel(frontend, payments, "POST /payments/vnpay/create (Idempotency-Key)")
+Rel(frontend, promo, "Kiểm tra mã khuyến mãi")
+
+' ===== Quan hệ: Payment <-> VNPay =====
+Rel(payments, vnpay, "Tạo URL ký HMAC-SHA512; nhận IPN /vnpay/ipn")
+
+' ===== Quan hệ: Module -> Database =====
+Rel(auth, postgres, "users")
+Rel(products, postgres, "products, ingredients, toppings")
+Rel(cart, postgres, "session store / Redis")
+Rel(orders, postgres, "orders, order_items; ingredients.version")
+Rel(payments, postgres, "payments — UNIQUE idempotencyKey")
+Rel(promo, postgres, "coupons")
+Rel(loyalty, postgres, "loyalty_points")
+
+' ===== Quan hệ nội bộ module =====
+Rel(orders, payments, "Tạo Payment khi tạo đơn PENDING")
+Rel(payments, orders, "Cập nhật PAID/FAILED sau IPN hợp lệ")
+Rel(orders, promo, "Xác thực & tính giảm giá")
+Rel(payments, loyalty, "Cộng điểm chỉ khi đơn PAID")
+Rel(scheduler, orders, "Quét PENDING > 15 phút; hoàn reserved")
+Rel(common, auth, "Guard/Validation dùng chung")
+Rel(config, payments, "Cung cấp VNPay secret, JWT secret")
+
+@enduml

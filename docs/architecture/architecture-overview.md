@@ -12,9 +12,24 @@
 - **ADR liên quan:** [ADR-002: Next.js PWA & Client-side Cart State](./adr/002-nextjs-pwa-and-client-cart.md)
 
 ## 2. Kiến trúc Backend (NestJS Modular Monolith) — [Phụ trách: Bạn C]
-- **Sơ đồ C4 Backend Component:** `![C4 Backend Component](../diagrams/c4-backend-component.svg)`
-- **Kiến trúc phân lớp & Module:** (Điền luồng Request qua Controller -> ValidationPipe -> JwtAuthGuard -> Domain Services -> PrismaService; liệt kê các module `Auth`, `Products`, `Orders`, `Payments`, `Promotions`, `Health`)
-- **ADR liên quan:** [ADR-003: Modular Monolith với NestJS](./adr/003-modular-monolith-nestjs.md)
+
+### 2.1 Tổng quan
+Backend sử dụng kiến trúc **Modular Monolith** trên NestJS, tổ chức theo giới hạn nghiệp vụ (Domain-Driven). Toàn bộ luồng tạo đơn nằm trong một giao dịch ACID duy nhất.
+
+### 2.2 Cấu trúc 4 lớp
+| Lớp | Thành phần chính | Chức năng |
+|---|---|---|
+| Presentation Layer | Controllers, DTOs, ValidationPipe | Nhận request, xác thực dữ liệu đầu vào |
+| Security Layer | JwtAuthGuard, RolesGuard | Xác thực & phân quyền truy cập |
+| Domain Modules | Products, Orders, Payments, Promotions | Logic nghiệp vụ cốt lõi |
+| Data Access Layer | PrismaService | Giao tiếp duy nhất với Database |
+
+### 2.3 Liên kết
+- **Task 1 & 2:** FR-05, FR-06, FR-08, FR-09, FR-10
+- **ADR tham chiếu:** `adr/003-modular-monolith-nestjs.md`, `adr/004-idempotent-payment-vnpay.md`
+- **Sơ đồ:** `docs/diagrams/c4-backend-component.svg`
+
+---
 
 ## 3. Cơ sở dữ liệu PostgreSQL & Cơ chế Migration — [Phụ trách: Bạn E]
 - **Thiết kế dữ liệu & Ràng buộc:** (Liên kết tới `class-domain.svg` và `backend/prisma/schema.prisma`, nêu các khóa duy nhất `email`, `idempotencyKey`, `orderId` trên `LoyaltyTransaction`)
@@ -23,9 +38,22 @@
 - **ADR liên quan:** [ADR-005: PostgreSQL, Prisma Migration & Optimistic Locking](./adr/005-postgresql-prisma-optimistic-lock.md)
 
 ## 4. Kiến trúc Dịch vụ Thanh toán (Mock & VNPay Sandbox) — [Phụ trách: Bạn C]
-- **Tách biệt phương thức thanh toán:** (Giải thích luồng đồng bộ cho `WALLET`/`CARD` và luồng bất đồng bộ Redirect + IPN Webhook cho `VNPay Sandbox`)
-- **Bảo mật giao dịch & Chống trùng lặp:** (Cơ chế `Idempotency-Key` và xác thực chữ ký `HMAC-SHA512`)
-- **ADR liên quan:** [ADR-004: Thanh toán Idempotent & Tích hợp VNPay IPN](./adr/004-idempotent-payment-vnpay.md)
+
+### 4.1 Hai kênh thanh toán
+| Kênh | Cổng | Xử lý | Trạng thái |
+|---|---|---|---|
+| Nội bộ | Wallet/Card — mô phỏng | Đồng bộ ngay tại Backend | Hoàn thành ngay |
+| Bên thứ ba | VNPay Sandbox | Bất đồng bộ qua Redirect + IPN Webhook | Chờ xác nhận |
+
+### 4.2 An toàn giao dịch
+- Bắt buộc `Idempotency-Key` trong Header mỗi yêu cầu thanh toán
+- Xác minh chữ ký **HMAC-SHA512** từ VNPay trước khi cập nhật đơn hàng
+
+### 4.3 Liên kết
+- **Task 1:** FR-06
+- **ADR tham chiếu:** `adr/004-idempotent-payment-vnpay.md`
+
+---
 
 ## 5. Logging, Health Check & Quản lý Cấu hình — [Phụ trách: Bạn E]
 - **Quản lý cấu hình (Config):** (Sử dụng `ConfigModule` nạp `.env`, tách biệt cấu hình Local và Production Secrets)
