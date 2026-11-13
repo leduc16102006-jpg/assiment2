@@ -1,0 +1,72 @@
+name: BrewLite CI Pipeline
+
+on:
+  pull_request:
+    branches: [ "develop", "main" ]
+
+jobs:
+  api-ci:
+    name: Backend API (Install -> Lint -> Test -> Build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./apps/api
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: apps/api/package-lock.json
+
+      - name: 1. Install dependencies (Backend)
+        run: npm ci
+
+      - name: Generate Prisma Client (if schema exists)
+        run: |
+          if [ -f "prisma/schema.prisma" ]; then
+            npx prisma generate
+          fi
+
+      - name: 2. Lint Backend (oxlint)
+        run: npm run lint
+
+      - name: 3. Unit Test Backend (Jest)
+        run: npm run test
+
+      - name: 4. Build Backend (NestJS)
+        run: npm run build
+
+  web-ci:
+    name: Frontend Web (Install -> Lint -> Test -> Build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./apps/web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: 1. Install dependencies (Frontend)
+        run: npm ci
+
+      - name: 2. Lint Frontend (ESLint)
+        run: npm run lint
+
+      - name: 3. Unit Test Frontend (Node Test Runner)
+        run: npm run test
+
+      - name: 4. Build Frontend (Next.js)
+        run: npm run build

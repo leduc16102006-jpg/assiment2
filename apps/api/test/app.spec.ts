@@ -5,7 +5,7 @@ describe('AppController (Base Scaffold)', () => {
     const controller = new AppController();
     expect(controller.getRoot()).toEqual({
       service: 'BrewLite API',
-      status: 'running',
+      status: 'running'
     });
   });
 });
