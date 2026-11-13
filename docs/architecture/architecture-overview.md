@@ -33,19 +33,31 @@
 - **Logging & Bảo mật dữ liệu nhạy cảm:** (Ghi log lỗi giao dịch, xung đột kho, sai chữ ký IPN; quy tắc che giấu mật khẩu, JWT và Hash Secret)
 
 ## 6. Kiến trúc Triển khai Production (Task 3.2) — [Phụ trách: Bạn B]
-- **Sơ đồ Deployment:** `![Deployment Diagram](../diagrams/deployment-production.svg)`
-- **Ranh giới môi trường (Local — CI — Production):** (Mô tả chi tiết Docker Compose local, GitHub Actions + `ghcr.io`, Vercel CDN và Render Cloud)
-- **Giao thức, Cổng kết nối & Lưu trữ bền vững:** (Liệt kê `HTTPS :443`, `TCP :5432` nội bộ, Persistent Disk của PostgreSQL)
-- **ADR liên quan:** [ADR-001: Cấu trúc Monorepo & Hạ tầng triển khai Vercel - Render](./adr/001-monorepo-and-deployment.md)
 
-## 7. Ma trận Truy vết Kiến trúc $\leftrightarrow$ Mã nguồn (Traceability) — [Phụ trách: Bạn B]
+![UML Deployment Diagram](../diagrams/DeploymentProduction.svg)
 
-| Thành phần Kiến trúc / Sơ đồ | Yêu cầu liên kết (Task 1) | ADR | Đường dẫn Mã nguồn thực tế trong Repo |
-| :--- | :--- | :--- | :--- |
-| Next.js Web App / PWA (Vercel) | FR-01..03, FR-07, NFR-03 | ADR-002 | `frontend/src/app/`, `frontend/src/context/CartContext.tsx`, `frontend/public/manifest.json` |
-| NestJS API Container (Render) | FR-04..12, NFR-01..02 | ADR-003 | `backend/src/main.ts`, `backend/src/app.module.ts` |
-| Auth & Security Guard | FR-04, NFR-02 | ADR-003 | `backend/src/auth/` (`jwt.strategy.ts`, `jwt-auth.guard.ts`) |
-| Orders & Optimistic Stock Lock | FR-05, FR-08, NFR-01, NFR-05 | ADR-005 | `backend/src/orders/` (`orders.service.ts`) |
-| Payment & VNPay IPN Service | FR-06, FR-10, NFR-02 | ADR-004 | `backend/src/payments/` (`payments.service.ts`, `vnpay.util.ts`) |
-| PostgreSQL & Prisma Migrations | FR-05, FR-12, NFR-04..05 | ADR-005 | `backend/prisma/schema.prisma`, `backend/prisma/migrations/` |
-| Health Check & Logging | FR-12, NFR-07 | ADR-001 | `backend/src/health/`, `docker-compose.yml` |
+- **Ranh giới giữa 3 môi trường:**
+  - **Local Environment (`docker-compose.yml`):** Khởi chạy đồng thời 3 container cục bộ gồm `brewlite_frontend` (ánh xạ cổng máy thật `3001` vào cổng container `3000`), `brewlite_backend` (cổng `3000:3000`) và `brewlite_postgres` (`postgres:16-alpine`, cổng `5432:5432`, gắn ổ đĩa `postgres_data` tại `/var/lib/postgresql/data`).
+  - **CI & Container Registry (`GitHub Actions` + `GHCR`):** Tự động kiểm tra mã nguồn (Lint, Test, Build), đóng gói Docker image từ `./backend/Dockerfile` và đẩy lên GitHub Container Registry (`ghcr.io`) với nhãn `brewlite_backend:latest`.
+  - **Production Environment (`Vercel` + `Render` + `VNPay Sandbox`):** Phục vụ người dùng cuối trên trình duyệt di động/máy tính theo hướng Mobile-First / PWA.
+- **Giao thức, Cổng kết nối & Lưu trữ bền vững:**
+  - Thiết bị người dùng giao tiếp với **Vercel Edge CDN** (tải giao diện tĩnh & PWA) và **Render Web Service** (gọi REST API kèm `Bearer JWT` và `Idempotency-Key`) hoàn toàn qua giao thức **HTTPS (cổng 443)**.
+  - Container **NestJS API Server** trên Render lắng nghe ở cổng nội bộ `3000` (`process.env.PORT ?? 3000`), kết nối tới **Render Managed PostgreSQL** (`brewlite_db`) qua mạng nội bộ riêng tư (**Internal Private Network, cổng TCP 5432**), không phơi bày Database ra Internet.
+  - Dữ liệu PostgreSQL được lưu trữ trên **Render Persistent Disk** (`/var/lib/postgresql/data`), đảm bảo không mất dữ liệu khi khởi động lại dịch vụ.
+- **Quản lý cấu hình, Health Check & Logging:**
+  - Các biến môi trường và khóa bí mật (`PORT`, `DATABASE_URL`, `JWT_SECRET`, `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_PAYMENT_URL`, `VNPAY_RETURN_URL`, `NEXT_PUBLIC_API_URL`) được tiêm trực tiếp lúc runtime từ trình quản lý cấu hình của Render và Vercel, không lưu cứng trong mã nguồn.
+  - Render định kỳ gọi **Health Check Probe** (`GET /health` tại cổng nội bộ `3000`) để giám sát trạng thái container và thu thập toàn bộ log đầu ra (`stdout`) về **Render Log Stream**.
+- **ADR liên quan:** [ADR-001: Tổ chức mã nguồn Monorepo và Hạ tầng triển khai Vercel + Render](./adr/001-monorepo-and-deployment.md)
+
+## 7. Ma trận Truy vết Kiến trúc ↔ Mã nguồn (Traceability) — [Phụ trách: Bạn B]
+
+| Node / Dịch vụ trên Sơ đồ Deployment (Task 3.2) | Thành phần Kiến trúc tương ứng (Task 3.1) | Vị trí tệp / thư mục thực tế trong Mã nguồn |
+| :--- | :--- | :--- |
+| **Client Device (Web Browser / Next.js PWA)** | Frontend Next.js theo hướng Mobile-First / PWA (Mục 1, ADR-002) | `frontend/` (`src/`, `public/`, `CartContext` lưu `localStorage`) |
+| **Vercel Platform (Next.js Hosting & CDN)** | Tầng phân phối giao diện Next.js & quản lý cấu hình FE (Mục 1, Mục 5) | `frontend/`, cấu hình `NEXT_PUBLIC_API_URL` trong `docker-compose.yml` |
+| **GHCR (`brewlite_backend:latest`) & GitHub Actions** | Quyết định đóng gói container & Monorepo CI/CD (ADR-001, Mục 6) | `backend/Dockerfile`, `docker-compose.yml` (`build: ./backend`) |
+| **Render Web Service (`NestJS API Server :3000`)** | Backend NestJS theo module/domain (Mục 2, ADR-003) | `backend/src/main.ts` (`port = 3000`, `/api/docs`), `backend/src/app.module.ts` |
+| **Render Managed PostgreSQL (`brewlite_db :5432`) + Persistent Disk** | PostgreSQL, cơ chế Prisma Migration & Optimistic Lock (Mục 3, ADR-005) | `backend/prisma/schema.prisma`, `backend/prisma/migrations/`, volume `postgres_data` trong `docker-compose.yml` |
+| **VNPay Sandbox & Luồng Webhook IPN** | Dịch vụ thanh toán mô phỏng & VNPay Sandbox (Mục 4, ADR-004) | `backend/src/payments/`, các biến `VNPAY_*` trong `backend/.env.example` |
+| **Render & Vercel Environment Variables / Secrets** | Quản lý cấu hình tách biệt mã nguồn (Mục 5) | `backend/.env.example` (`PORT`, `DATABASE_URL`, `JWT_SECRET`, `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_PAYMENT_URL`, `VNPAY_RETURN_URL`) |
+| **Health Check (`GET /health`) & Log Stream** | Logging, Health check và giám sát vận hành (Mục 5) | `backend/src/main.ts` (Logger), module health check trong `backend/src/` |

@@ -1,0 +1,92 @@
+@startuml DeploymentProduction
+left to right direction
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultFontName "Arial"
+skinparam packageStyle rectangle
+
+title Task 3.2 - UML DEPLOYMENT DIAGRAM: BREWLITE (LOCAL, CI & PRODUCTION)
+
+' ==========================================
+' 1. MÔI TRƯỜNG LOCAL (Từ docker-compose.yml)
+' ==========================================
+node "1. LOCAL ENVIRONMENT (Developer Machine)" as LocalEnv {
+  node "Docker Compose (docker-compose.yml)" as DockerCompose {
+    artifact "brewlite_frontend\n(Next.js ./frontend)\n[Host :3001 -> Container :3000]" as LocalFE
+    artifact "brewlite_backend\n(NestJS ./backend)\n[Port 3000:3000]" as LocalBE
+    database "brewlite_postgres\n(postgres:16-alpine)\n[Port 5432:5432 | DB: brewlite_db]" as LocalDB
+    storage "Docker Volume: postgres_data\n(/var/lib/postgresql/data)" as LocalVol
+
+    LocalFE --> LocalBE : HTTP REST (:3000)\nNEXT_PUBLIC_API_URL
+    LocalBE --> LocalDB : TCP (:5432)\npostgres:5432/brewlite_db
+    LocalDB -- LocalVol : Persistent Mount
+  }
+}
+
+' ==========================================
+' 2. MÔI TRƯỜNG CI & CONTAINER REGISTRY
+' ==========================================
+node "2. CI & CONTAINER REGISTRY (GitHub)" as CIEnv {
+  node "GitHub Actions Runner\n(CI Pipeline)" as GHA {
+    component "Lint, Test & Docker Build" as CIJob
+  }
+  node "GitHub Container Registry (GHCR)\n[ghcr.io]" as GHCR {
+    artifact "brewlite_backend:latest\n(Docker Image)" as DockerImg
+  }
+  CIJob --> DockerImg : Push Image (HTTPS :443)
+}
+
+' ==========================================
+' 3. MÔI TRƯỜNG PRODUCTION (Vercel + Render)
+' ==========================================
+node "3. PRODUCTION ENVIRONMENT" as ProdEnv {
+
+  node "Thiết bị Người dùng\n(Mobile / Desktop)" as ClientDevice {
+    component "Web Browser / Next.js PWA\n(Mobile-First UI, localStorage)" as ClientPWA
+  }
+
+  cloud "Vercel Platform (Frontend Hosting & CDN)" as VercelCloud {
+    node "Vercel Edge CDN" as VercelCDN {
+      artifact "BrewLite Next.js/PWA\n(Build từ ./frontend)" as ProdFE
+    }
+    file "Vercel Env Vars\n(NEXT_PUBLIC_API_URL)" as VercelEnv
+    component "Vercel Runtime & Access Logs" as VercelLogs
+
+    VercelEnv ..> ProdFE : Inject Config
+    ProdFE ..> VercelLogs : Write Logs
+  }
+
+  cloud "Render Platform (Backend & Managed DB)" as RenderCloud {
+    node "Render Web Service (Docker Container)" as RenderBEHost {
+      artifact "NestJS API Server\n[Internal Port: 3000]\n(Swagger: /api/docs)" as ProdBE
+      component "Health Check Probe\n(GET /health)" as HealthCheck
+      component "Render Log Stream\n(NestJS Logger / Stdout)" as RenderLogs
+    }
+
+    node "Render Managed PostgreSQL" as RenderDBHost {
+      database "PostgreSQL 16\n(DB: brewlite_db)\n[Internal Port: 5432]" as ProdDB
+      storage "Render Persistent Disk\n(/var/lib/postgresql/data)" as ProdDisk
+    }
+
+    file "Render Environment Variables & Secrets\n(PORT=3000, DATABASE_URL, JWT_SECRET,\nVNPAY_TMN_CODE, VNPAY_HASH_SECRET,\nVNPAY_PAYMENT_URL, VNPAY_RETURN_URL)" as RenderSecrets
+
+    RenderSecrets ..> ProdBE : Inject at Runtime
+    HealthCheck ..> ProdBE : HTTP Ping (:3000/health)
+    ProdBE ..> RenderLogs : Stream Logs
+    ProdBE --> ProdDB : Internal Private Network\nTCP (:5432) via DATABASE_URL
+    ProdDB -- ProdDisk : Persistent Storage
+  }
+
+  cloud "External Payment Gateway" as ExtGateway {
+    node "VNPay Sandbox\n(sandbox.vnpayment.vn)" as VNPay
+  }
+
+  ClientPWA <--> ProdFE : HTTPS (:443)\nStatic Assets & PWA
+  ClientPWA <--> ProdBE : HTTPS (:443 -> :3000)\nREST API + Bearer JWT + Idempotency-Key
+  ClientPWA <--> VNPay : HTTPS (:443)\nRedirect & VNPAY_RETURN_URL
+  VNPay --> ProdBE : HTTPS (:443)\nIPN Webhook (HMAC-SHA512)
+}
+
+DockerImg ..> RenderBEHost : Pull Image & Deploy (HTTPS)
+
+@enduml
