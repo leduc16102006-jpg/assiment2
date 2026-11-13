@@ -78,10 +78,10 @@ Dữ liệu giỏ hàng phía Client chỉ phục vụ trải nghiệm người 
 
 ## 5. Tài liệu và mã nguồn liên quan (References)
 
-- `frontend/app/`
-- `frontend/components/`
-- `frontend/context/CartContext.tsx`
-- `frontend/lib/api.ts`
-- `frontend/public/`
-- `frontend/package.json`
+- `apps/web/`
+- `apps/web/components/`
+- `apps/web/context/CartContext.tsx`
+- `apps/web/lib/api.ts`
+- `apps/web/public/`
+- `apps/web/package.json`
 - `docs/diagrams/c4-context-container.puml`
