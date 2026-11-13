@@ -1,29 +1,25 @@
-# ADR-001: Tổ chức mã nguồn Monorepo và Hạ tầng triển khai Vercel + Render
+# ADR-001: Cấu trúc Monorepo và Nền tảng Triển khai (Vercel & Render)
 
-- **Trạng thái:** Đã chấp nhận (Accepted)
-- **Ngày:** 12/11/2026
-- **Người phụ trách:** Bạn B (Scrum Master)
-- **Liên kết yêu cầu:** NFR-04 (Deployability), NFR-06 (CI/Maintainability), Task 1.1 (Mục 5.3)
+- **Trạng thái:** Đã chốt (Accepted)
+- **Ngày:** 13/11/2026
+- **Người phụ trách:** Lê Vũ Đức (Scrum Master)
 
-## 1. Bối cảnh (Context)
-Dự án BrewLite bao gồm ứng dụng Frontend (Next.js/PWA), Backend API (NestJS) và cơ sở dữ liệu PostgreSQL. Nhóm phát triển gồm 4 thành viên cần một cấu trúc lưu trữ mã nguồn dễ đồng bộ API contract, chạy kiểm thử tự động qua CI và triển khai lên môi trường Production có hỗ trợ HTTPS, Docker container, lưu trữ bền vững cho DB và quản lý biến môi trường an toàn.
+## 1. Bối cảnh
+Dự án BrewLite cần một giải pháp lưu trữ mã nguồn dễ quản lý cho nhóm 4 người, kèm theo một hạ tầng triển khai Production đáp ứng được Next.js (Mobile-first/PWA), NestJS (Docker) và PostgreSQL có Persistent Storage, đồng thời phải miễn phí/chi phí thấp.
 
-## 2. Quyết định (Decision)
-1. Tổ chức toàn bộ mã nguồn (`frontend/`, `backend/`, `docs/`, `docker-compose.yml`) trong một kho lưu trữ duy nhất (**Monorepo**) trên GitHub.
-2. Sử dụng **Docker Compose** cho môi trường phát triển cục bộ (Local).
-3. Sử dụng **GitHub Actions** kết hợp **GitHub Container Registry (`ghcr.io`)** cho quy trình CI/CD.
-4. Triển khai Production phân tách theo đặc thù từng tầng: **Vercel** (phục vụ Next.js/PWA qua CDN & HTTPS) và **Render** (chạy Docker container NestJS API kết nối mạng nội bộ tới Managed PostgreSQL có Persistent Disk).
+## 2. Quyết định
+- Gom chung mã nguồn Frontend và Backend vào một repository duy nhất (**Monorepo**).
+- Sử dụng **Vercel** để triển khai Frontend (Next.js).
+- Sử dụng **Render** để chạy Backend (Web Service Container kéo image từ **GHCR**) và cơ sở dữ liệu PostgreSQL.
 
-## 3. Lý do lựa chọn (Rationale)
-- Monorepo giúp nhóm quản lý tập trung tài liệu đặc tả, sơ đồ thiết kế và mã nguồn trong cùng một lịch sử Pull Request, đảm bảo tính truy vết xuyên suốt.
-- Vercel tối ưu hóa sẵn cho Next.js (tự động cấp SSL, CDN toàn cầu và nhận diện PWA) mà không cần cấu hình reverse proxy thủ công.
-- Render hỗ trợ chạy trực tiếp từ `Dockerfile` của NestJS, tích hợp sẵn Health Check endpoint (`GET /health`), Runtime Logs và tách biệt Managed PostgreSQL vào mạng nội bộ riêng tư (không mở cổng 5432 ra Internet).
+## 3. Lý do lựa chọn
+- Vercel tối ưu hóa gốc cho Next.js, tự động cấp HTTPS và CDN toàn cầu.
+- Render hỗ trợ chạy trực tiếp Docker Image, cung cấp mạng nội bộ (Internal URL) cho PostgreSQL giúp bảo mật Database khỏi Internet.
 
-## 4. Ưu điểm (Pros)
-- Khởi chạy toàn bộ môi trường cục bộ chỉ bằng một lệnh `docker compose up --build`.
-- Tự động hóa hoàn toàn từ lúc mở PR (Lint, Test, Build) đến lúc deploy lên Production.
-- Bảo mật cao: Secrets được tiêm trực tiếp lúc runtime trên cloud; Database không bị lộ trực tiếp ra ngoài.
+## 4. Ưu điểm
+- Chỉ cần 1 lệnh `docker compose up` là chạy được toàn bộ hệ thống ở Local.
+- Phân tách rõ ràng luồng CI/CD: Vercel tự build Frontend, GitHub Actions tự build Backend và đẩy lên GHCR.
 
-## 5. Hạn chế & Đánh đổi (Cons & Trade-offs)
-- **Hạn chế:** Trên gói miễn phí của Render, container Backend có thể rơi vào trạng thái ngủ (cold start) sau một khoảng thời gian không có truy cập, làm request đầu tiên mất khoảng 20–40 giây để khởi động lại.
-- **Biện pháp giảm thiểu:** Thiết lập endpoint `GET /health` nhẹ và cấu hình thông báo trạng thái tải dữ liệu (Loading/Retry) ở tầng giao diện Next.js để người dùng nhận biết rõ khi hệ thống đang khởi động.
+## 5. Hạn chế và Trade-off (Đánh đổi)
+- **Hạn chế:** Cấu trúc Monorepo dễ khiến CI chạy lại toàn bộ quy trình build ngay cả khi chỉ sửa một file Markdown. Render gói miễn phí sẽ bị "ngủ đông" (Cold start) nếu không có request sau 15 phút.
+- **Đánh đổi:** Nhóm chấp nhận thiết lập filter đường dẫn trong GitHub Actions để tối ưu CI, và chấp nhận request đầu tiên của Backend mất 20-30s khởi động đổi lấy việc tiết kiệm chi phí vận hành.
