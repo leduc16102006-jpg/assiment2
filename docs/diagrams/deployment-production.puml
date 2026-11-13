@@ -12,8 +12,8 @@ title Task 3.2 - UML DEPLOYMENT DIAGRAM: BREWLITE (LOCAL, CI & PRODUCTION)
 ' ==========================================
 node "1. LOCAL ENVIRONMENT (Developer Machine)" as LocalEnv {
   node "Docker Compose (docker-compose.yml)" as DockerCompose {
-    artifact "brewlite_frontend\n(Next.js ./frontend)\n[Host :3001 -> Container :3000]" as LocalFE
-    artifact "brewlite_backend\n(NestJS ./backend)\n[Port 3000:3000]" as LocalBE
+    artifact "brewlite_frontend\n(Next.js ./apps/web)\n[Host :3001 -> Container :3000]" as LocalFE
+    artifact "brewlite_backend\n(NestJS ./apps/api)\n[Port 3000:3000]" as LocalBE
     database "brewlite_postgres\n(postgres:16-alpine)\n[Port 5432:5432 | DB: brewlite_db]" as LocalDB
     storage "Docker Volume: postgres_data\n(/var/lib/postgresql/data)" as LocalVol
 
@@ -47,7 +47,7 @@ node "3. PRODUCTION ENVIRONMENT" as ProdEnv {
 
   cloud "Vercel Platform (Frontend Hosting & CDN)" as VercelCloud {
     node "Vercel Edge CDN" as VercelCDN {
-      artifact "BrewLite Next.js/PWA\n(Build từ ./frontend)" as ProdFE
+      artifact "BrewLite Next.js/PWA\n(Build từ ./apps/web)" as ProdFE
     }
     file "Vercel Env Vars\n(NEXT_PUBLIC_API_URL)" as VercelEnv
     component "Vercel Runtime & Access Logs" as VercelLogs
