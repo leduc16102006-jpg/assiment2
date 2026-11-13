@@ -6,10 +6,67 @@
 ---
 
 ## 1. Kiến trúc Frontend (Next.js & PWA) — [Phụ trách: Bạn D]
-- **Sơ đồ C4 Context & Container:** `![C4 Context & Container](../diagrams/c4-context-container.svg)`
-- **Tổ chức phân lớp Next.js:** (Điền mô tả Pages/App Router, Components Mobile-first, `CartContext` + `localStorage`)
-- **Cấu hình PWA:** (Điền mô tả `manifest.json`, icons, Service Worker và cách hoạt động trên trình duyệt di động/desktop)
-- **ADR liên quan:** [ADR-002: Next.js PWA & Client-side Cart State](./adr/002-nextjs-pwa-and-client-cart.md)
+### 1.1. Sơ đồ C4 Context & Container
+Sơ đồ mô tả ranh giới hệ thống BrewLite, người dùng, các container chính và mối quan hệ với hệ thống thanh toán bên ngoài.
+
+![C4 Context & Container](../diagrams/c4-context-container.svg)
+
+Các thành phần chính:
+- **Customer:** Người dùng truy cập ứng dụng để xem thực đơn, quản lý giỏ hàng, đặt món và thanh toán.
+- **Frontend Application:** Ứng dụng Next.js/React cung cấp giao diện và xử lý tương tác phía Client.
+- **Backend API:** Ứng dụng NestJS cung cấp REST API, xử lý nghiệp vụ và xác thực yêu cầu.
+- **Application Database:** PostgreSQL lưu trữ dữ liệu nghiệp vụ, được truy cập thông qua Prisma.
+- **VNPay Sandbox:** Hệ thống thanh toán bên ngoài phục vụ tích hợp và kiểm thử giao dịch.
+
+### 1.2. Tổ chức kiến trúc Frontend
+Frontend sử dụng Next.js với App Router và React. Cấu trúc mã nguồn được tổ chức theo trách nhiệm:
+
+| Thành phần | Vai trò |
+|---|---|
+| `app/` | Quản lý các trang và điều hướng như Menu, Cart, Login, Register, Orders và Order Confirmation. |
+| `components/` | Chứa các thành phần giao diện có thể tái sử dụng. |
+| `context/` | Quản lý trạng thái dùng chung bằng React Context, hiện có `CartContext`. |
+| `lib/` | Chứa các hàm giao tiếp với Backend API, hiện có `api.ts`. |
+| `public/` | Lưu trữ tài nguyên tĩnh của ứng dụng. |
+
+Giao diện sử dụng Tailwind CSS và được xây dựng theo hướng responsive, hỗ trợ nhiều kích thước màn hình.
+
+Luồng giao tiếp chính:
+
+1. Người dùng tương tác với các trang và component thuộc Next.js.
+2. Frontend sử dụng các hàm trong `lib/api.ts` để gửi HTTP request đến NestJS Backend.
+3. Các yêu cầu cần xác thực gửi kèm Bearer JWT.
+4. Backend xử lý nghiệp vụ và trả kết quả để Frontend cập nhật giao diện.
+
+### 1.3. Quản lý trạng thái giỏ hàng phía Client
+Giỏ hàng được quản lý bằng React Context thông qua `CartContext.tsx`, kết hợp `localStorage` để duy trì dữ liệu trên trình duyệt.
+
+Các thao tác được cung cấp gồm:
+- `addToCart`: Thêm sản phẩm vào giỏ hàng.
+- `updateQty`: Cập nhật số lượng sản phẩm.
+- `removeFromCart`: Xóa sản phẩm khỏi giỏ hàng.
+- `clearFromCart`: Xóa toàn bộ dữ liệu giỏ hàng.
+- `totalQty` và `totalPrice`: Tính tổng số lượng và tổng tiền để hiển thị.
+
+Dữ liệu giỏ hàng được lưu tại khóa `brewlite_cart` trong `localStorage`. Cách tổ chức này giúp các trang có thể sử dụng chung trạng thái giỏ hàng và khôi phục dữ liệu sau khi tải lại trang.
+
+**Ranh giới trách nhiệm:** Dữ liệu phía Client chỉ phục vụ hiển thị và tương tác. Backend vẫn phải xác thực sản phẩm, số lượng, giá và tồn kho trước khi tạo đơn hàng hoặc xử lý thanh toán.
+
+### 1.4. Định hướng mở rộng Progressive Web App (PWA)
+Assignment 2 định hướng mở rộng ứng dụng Next.js theo mô hình PWA nhằm cải thiện trải nghiệm trên thiết bị di động và hỗ trợ khả năng cài đặt ứng dụng.
+
+Các thành phần dự kiến bổ sung:
+
+- **Web App Manifest:** Khai báo tên ứng dụng, biểu tượng, màu giao diện và chế độ hiển thị.
+- **Application Icons:** Cung cấp biểu tượng phù hợp với thiết bị và kích thước màn hình.
+- **Service Worker:** Hỗ trợ caching các tài nguyên tĩnh phù hợp, cải thiện khả năng tải lại giao diện.
+- **Responsive UI:** Tiếp tục ưu tiên thiết kế mobile-first và khả năng thích ứng với nhiều kích thước màn hình.
+
+PWA không thay thế Backend. Những nghiệp vụ như kiểm tra tồn kho, tạo đơn hàng và thanh toán vẫn cần kết nối đến Backend API.
+
+### 1.5. Quyết định kiến trúc liên quan
+Tham chiếu [ADR-002: Next.js PWA và quản lý trạng thái giỏ hàng phía Client](./adr/002-nextjs-pwa-and-client-cart.md), trong đó trình bày lý do tiếp tục sử dụng Next.js, lựa chọn React Context kết hợp `localStorage`, định hướng PWA và các đánh đổi của phương án.
+
 
 ## 2. Kiến trúc Backend (NestJS Modular Monolith) — [Phụ trách: Bạn C]
 
@@ -198,7 +255,7 @@ Phương án thiết kế cho Assignment 2: sử dụng **NestJS Logger** hoặc
 | **Vercel Platform (Next.js Hosting & CDN)** | Tầng phân phối giao diện Next.js & quản lý cấu hình FE (Mục 1, Mục 5) | `apps/web/`, cấu hình `NEXT_PUBLIC_API_URL` trong `docker-compose.yml` |
 | **GHCR (`brewlite_backend:latest`) & GitHub Actions** | Quyết định đóng gói container & Monorepo CI/CD (ADR-001, Mục 6) | `apps/api/Dockerfile`, `docker-compose.yml` (`build: ./apps/api`) |
 | **Render Web Service (`NestJS API Server :3000`)** | Backend NestJS theo module/domain (Mục 2, ADR-003) | `apps/api/src/main.ts` (`port = 3000`, `/api/docs`), `apps/api/src/app.module.ts` |
-| **Render Managed PostgreSQL (`brewlite_db :5432`) + Persistent Disk** | PostgreSQL, cơ chế Prisma Migration & Optimistic Lock (Mục 3, ADR-005) | `/apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/`, volume `postgres_data` trong `docker-compose.yml` |
+| **Render Managed PostgreSQL (`brewlite_db :5432`) + Persistent Disk** | PostgreSQL, cơ chế Prisma Migration & Optimistic Lock (Mục 3, ADR-005) | `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/`, volume `postgres_data` trong `docker-compose.yml` |
 | **VNPay Sandbox & Luồng Webhook IPN** | Dịch vụ thanh toán mô phỏng & VNPay Sandbox (Mục 4, ADR-004) | `apps/api/src/payments/`, các biến `VNPAY_*` trong `apps/api/.env.example` |
 | **Render & Vercel Environment Variables / Secrets** | Quản lý cấu hình tách biệt mã nguồn (Mục 5) | `apps/api/.env.example` (`PORT`, `DATABASE_URL`, `JWT_SECRET`, `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_PAYMENT_URL`, `VNPAY_RETURN_URL`) |
 | **Health Check (`GET /health`) & Log Stream** | Logging, Health check và giám sát vận hành (Mục 5) | `apps/api/src/main.ts` (Logger), module health check trong `apps/api/src/` |
