@@ -6,7 +6,12 @@ export interface Product {
   price: number;
   imageUrl?: string | null;
   stock: number;
-  version: number;
+  availableBySize?: {
+    DEFAULT: number;
+    S: number;
+    M: number;
+    L: number;
+  };
 }
 
 export async function fetchProducts(): Promise<Product[]> {

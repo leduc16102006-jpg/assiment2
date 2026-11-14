@@ -29,7 +29,7 @@ export default function ProductDetailModal({
               alt={name}
               fill
               className="object-cover"
-              sizes="100vw"
+              sizes="(max-width: 768px) 100vw, 448px"
             />
           </div>
         )}
