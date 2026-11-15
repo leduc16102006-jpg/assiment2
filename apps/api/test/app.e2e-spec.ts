@@ -11,6 +11,13 @@ describe('AppController (e2e)', () => {
   let productIdToOrder: number;
 
   beforeAll(async () => {
+    // 1. ÉP BIẾN MÔI TRƯỜNG TRỰC TIẾP TRƯỚC KHI NESTJS KHỞI ĐỘNG
+    process.env.VNPAY_TMN_CODE = 'MOCK_TMN_CODE';
+    process.env.VNPAY_HASH_SECRET = 'MOCK_HASH_SECRET';
+    process.env.VNPAY_PAYMENT_URL = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+    process.env.VNPAY_RETURN_URL = 'http://localhost:3000/payments/vnpay/return';
+    process.env.JWT_SECRET = 'MOCK_JWT_SECRET_FOR_E2E_TEST';
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -30,6 +37,7 @@ describe('AppController (e2e)', () => {
   });
 
   describe('Luồng E2E: Từ Menu đến Thanh toán', () => {
+// ... GIỮ NGUYÊN TOÀN BỘ CÁC kịch bản it() từ 1 đến 5 TỪ ĐÂY TRỞ XUỐNG ...
     it('1. GET /products - Lấy danh sách sản phẩm từ menu', async () => {
       const response = await request(app.getHttpServer())
         .get('/products')
