@@ -1,25 +1,27 @@
-
-FROM node:22-alpine
-
-# Đặt thư mục làm việc trong container
+# Sử dụng Node.js 20 bản nhẹ
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy các tệp cấu hình package vào trước để cài thư viện
+# Copy các file cấu hình package
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
-# Copy toàn bộ mã nguồn backend vào container
+# Copy toàn bộ mã nguồn Backend
 COPY . .
 
-# ✅ SỬA: Dùng biến môi trường, không cứng localhost
-# Tạo Prisma Client — DATABASE_URL ở đây chỉ dùng lúc generate, không phải lúc chạy
-RUN DATABASE_URL="postgresql://postgres:postgres@postgres:5432/brewlite_db?schema=public" npx prisma generate
-
-# Biên dịch NestJS từ TypeScript sang JavaScript
+# Khởi tạo Prisma và Build NestJS
+RUN npx prisma generate
 RUN npm run build
 
-# Mở cổng 3000
-EXPOSE 3000
+# --- Chuyển sang stage Production để giảm dung lượng ---
+FROM node:20-alpine
+WORKDIR /app
 
-# ✅ SỬA: Dùng sh -c để chạy nhiều lệnh trong 1 dòng, biến môi trường từ .env/docker-compose sẽ có hiệu lực
-CMD ["sh", "-c", "npx prisma db push && npx prisma db seed && node dist/main"]
+# Copy các file đã build và node_modules từ bước builder
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+
+EXPOSE 3000
+CMD ["npm", "run", "start:prod"]
