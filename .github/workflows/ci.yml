@@ -58,6 +58,10 @@ jobs:
       - name: Push Database Schema
         run: npx prisma db push
 
+      # === THÊM BƯỚC NÀY ĐỂ BƠM DỮ LIỆU SEED VÀO TEST DB TRÊN GITHUB ===
+      - name: Seed Test Database
+        run: npx prisma db seed
+
       - name: 2. Lint Backend (oxlint)
         run: npm run lint
 
