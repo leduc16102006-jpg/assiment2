@@ -51,32 +51,28 @@ export async function fetchProducts(): Promise<Product[]> {
 // Alias để tương thích với các component gọi getProducts
 export const getProducts = fetchProducts;
 
+// apps/web/lib/api.ts
 export async function createOrder(
   items: { productId: number; qty: number; size?: string; toppings?: string[] }[],
   promotionCode?: string
 ) {
-  const payload: { items: typeof items; promotionCode?: string } = { items };
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
-  if (promotionCode && promotionCode.trim()) {
-    payload.promotionCode = promotionCode.trim().toUpperCase();
-  }
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...getAuthHeader(),
-  };
-
-  const res = await fetch(`${API_URL}/orders`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(payload),
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/orders`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}), // Dòng này cực kỳ quan trọng
+    },
+    body: JSON.stringify({ items, promotionCode }),
   });
 
-  const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.message || "Tạo đơn hàng thất bại.");
+    const errorData = await res.json();
+    throw new Error(errorData.message || 'Lỗi khi tạo đơn hàng');
   }
-  return data;
+
+  return res.json();
 }
 
 export async function processPayment(orderId: number, method: "WALLET" | "CARD") {
