@@ -1,44 +1,56 @@
+version: '3.8'
+
 services:
+  # 1. DATABASE
   postgres:
-    image: postgres:16-alpine
-    container_name: brewlite_postgres
-    restart: always
+    image: postgres:16
+    container_name: brewlite_postgres_local
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-brewlite_db}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: brewlite_db
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_local:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  backend:
-    build: ./apps/api
-    container_name: brewlite_backend
-    restart: always
+# 2. BACKEND API
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: brewlite_api_local
     ports:
       - "3000:3000"
     environment:
-      PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-brewlite_db}?schema=public
-      JWT_SECRET: ${JWT_SECRET:-brewlite_secret_key_2026_dev_only}
-      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-your_tmn_code_here}
-      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-your_hash_secret_here}
-      VNPAY_PAYMENT_URL: ${VNPAY_PAYMENT_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
-      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-http://localhost:3000/payments/vnpay/return}
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/brewlite_db?schema=public
+      - JWT_SECRET=${JWT_SECRET}
+      - VNPAY_TMN_CODE=${VNPAY_TMN_CODE}
+      - VNPAY_HASH_SECRET=${VNPAY_HASH_SECRET}
+      - VNPAY_PAYMENT_URL=${VNPAY_PAYMENT_URL}
+      - VNPAY_RETURN_URL=${VNPAY_RETURN_URL}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
-  frontend:
-    build: ./apps/web
-    container_name: brewlite_frontend
-    restart: always
+  # 3. FRONTEND WEB
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: brewlite_web_local
     ports:
-      - "3001:3000"
+      - "3001:3000" # Mở cổng 3001 ở trình duyệt, trỏ vào cổng 3000 của Next.js
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+      # Khi chạy trên trình duyệt người dùng, gọi API theo localhost
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
     depends_on:
-      - backend
+      - api
 
 volumes:
-  postgres_data:
+  postgres_data_local:
