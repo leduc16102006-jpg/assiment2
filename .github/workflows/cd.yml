@@ -70,16 +70,16 @@ jobs:
     steps:
       - name: Trigger Render Deployment (Tiêu chí 4 & 5)
         run: |
-          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
           echo "Đã gửi tín hiệu kéo Image mới và chạy Migration (Tiêu chí 5) trên Render."
           
       - name: Wait for Render to spin up
-        run: sleep 45 # Đợi Render khởi động container mới
+        run: sleep 45
 
       - name: Smoke Test (Health Check) (Tiêu chí 6)
         id: smoke-test
         run: |
-          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}\n" ${{ secrets.PROD_API_URL }}/health)
+          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}\n" "${{ secrets.PROD_API_URL }}/health")
           if [ "$HTTP_STATUS" -ne 200 ]; then
             echo "Smoke test thất bại với mã lỗi: $HTTP_STATUS"
             exit 1
