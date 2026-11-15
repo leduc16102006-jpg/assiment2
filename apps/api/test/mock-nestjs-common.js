@@ -86,3 +86,7 @@ module.exports = {
   UseGuards: dummyDecorator,
   default: {},
 };
+
+module.exports.Inject = dummyDecorator;
+module.exports.Optional = dummyDecorator;
+module.exports.Module = dummyDecorator;

@@ -20,6 +20,7 @@ const config: Config = {
     '^@nestjs/common$': '<rootDir>/test/mock-nestjs-common.js',
     '^@nestjs/swagger$': '<rootDir>/test/mock-nestjs-swagger.js',
     '^@nestjs/passport$': '<rootDir>/test/mock-nestjs-passport.js',
+    '^@nestjs/jwt$': '<rootDir>/test/mock-nestjs-jwt.js',
   },
   collectCoverageFrom: [
     'src/**/*.(t|j)s',
