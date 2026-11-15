@@ -1,3 +1,4 @@
+import * as bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -64,6 +65,51 @@ async function main(): Promise<void> {
       true
     )
   `;
+
+    // Demo user for Authentication testing
+  const passwordHash = await bcrypt.hash('Password123', 10);
+
+  await prisma.user.upsert({
+    where: { email: 'user@example.com' },
+    create: {
+      email: 'user@example.com',
+      fullName: 'Demo User',
+      passwordHash,
+    },
+    update: {
+      passwordHash,
+    },
+  });
+
+  console.log('[seed] Demo user ready: user@example.com');
+
+  // Demo promotion: WELCOME5 - 5% discount
+  const now = new Date();
+  const startsAt = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+  await prisma.promotion.upsert({
+    where: { code: 'WELCOME5' },
+    create: {
+      code: 'WELCOME5',
+      type: 'PERCENT',
+      value: 5,
+      minOrderAmount: 0,
+      startsAt,
+      expiresAt,
+      isActive: true,
+    },
+    update: {
+      type: 'PERCENT',
+      value: 5,
+      minOrderAmount: 0,
+      startsAt,
+      expiresAt,
+      isActive: true,
+    },
+  });
+
+  console.log('[seed] Promotion WELCOME5 ready.');
 
   const count = await prisma.product.count({
     where: { id: { in: drinks.map((drink) => drink.id) } },
