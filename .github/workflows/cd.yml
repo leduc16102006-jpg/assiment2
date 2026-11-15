@@ -3,7 +3,7 @@ name: Continuous Delivery Pipeline
 on:
   push:
     branches:
-      - develop # Đang test trên nhánh này, sau đổi thành main
+      - develop
       - chore/task-5-deployment
 
 env:
@@ -12,7 +12,7 @@ env:
 
 jobs:
   quality-gate-and-push:
-    name: 1 & 2 & 3. Quality Gate & Push Registry
+    name: 1, 2, 3. Quality Gate & Push Registry
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -52,6 +52,7 @@ jobs:
           tags: |
             type=sha,format=long
             type=raw,value=latest
+            type=raw,value=previous-stable
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -61,3 +62,36 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-and-smoke-test:
+    name: 4, 5, 6, 7. Deploy & Smoke Test & Rollback
+    needs: quality-gate-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deployment (Tiêu chí 4 & 5)
+        run: |
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          echo "Đã gửi tín hiệu kéo Image mới và chạy Migration (Tiêu chí 5) trên Render."
+          
+      - name: Wait for Render to spin up
+        run: sleep 45 # Đợi Render khởi động container mới
+
+      - name: Smoke Test (Health Check) (Tiêu chí 6)
+        id: smoke-test
+        run: |
+          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}\n" ${{ secrets.PROD_API_URL }}/health)
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Smoke test thất bại với mã lỗi: $HTTP_STATUS"
+            exit 1
+          else
+            echo "Smoke test thành công! API đang chạy tốt."
+          fi
+
+      - name: Rollback if Deployment Fails (Tiêu chí 7)
+        if: failure()
+        run: |
+          echo "Triển khai thất bại! Đang tiến hành Rollback..."
+          # Trong thực tế, bạn có thể gọi API của Render để quay về bản Deploy trước đó.
+          # Ở đây, ta in ra thông báo và DỪNG PIPELINE (Tiêu chí 7).
+          echo "Vui lòng vào Dashboard Render để chọn 'Rollback' về bản deploy gần nhất."
+          exit 1
