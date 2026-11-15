@@ -55,17 +55,19 @@ jobs:
             npx prisma generate
           fi
 
-      # === THÊM ĐÚNG 3 DÒNG NÀY ĐỂ TẠO BẢNG TRÊN TEST DB ===
       - name: Push Database Schema
         run: npx prisma db push
 
       - name: 2. Lint Backend (oxlint)
         run: npm run lint
 
-      - name: 3. Unit Test Backend (Jest)
+      - name: 3. Unit & Integration Test Backend (Jest)
         run: npm run test
 
-      - name: 4. Build Backend (NestJS)
+      - name: 4. E2E Test Backend (Jest)
+        run: npm run test:e2e
+
+      - name: 5. Build Backend (NestJS)
         run: npm run build
 
   web-ci:

@@ -4,6 +4,20 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
-  }
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "useESM": true,
+        "tsconfig": {
+          "module": "ES2022",
+          "moduleResolution": "Node",
+          "esModuleInterop": true
+        }
+      }
+    ]
+  },
+  "moduleNameMapper": {
+    "^src/(.*)$": "<rootDir>/../src/$1"
+  },
+  "extensionsToTreatAsEsm": [".ts"]
 }
