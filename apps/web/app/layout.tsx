@@ -5,6 +5,8 @@ import { CartProvider } from '@/context/CartContext';
 export const metadata: Metadata = {
   title: 'BrewLite — Đặt đồ uống trực tuyến',
   description: 'Hệ thống đặt cà phê và trà Mobile-First PWA',
+  applicationName: 'BrewLite',
+  manifest: '/manifest.webmanifest',
 };
 
 export default function RootLayout({
