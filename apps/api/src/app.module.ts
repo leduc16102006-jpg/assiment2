@@ -9,6 +9,7 @@ import { PromotionsModule } from './promotions/promotions.module';
 import { OrdersModule } from './orders/orders.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
     OrdersModule,
     ScheduleModule.forRoot(),
     SchedulerModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [],

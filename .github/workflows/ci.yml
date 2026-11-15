@@ -8,6 +8,29 @@ jobs:
   api-ci:
     name: Backend API (Install -> Lint -> Test -> Build)
     runs-on: ubuntu-latest
+
+    
+    # === Thêm PostgreSQL Service cho Integration Test ===
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: brewlite_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    # === Thêm Biến Môi trường ===
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/brewlite_test?schema=public"
+      JWT_SECRET: "ci_only_jwt_secret_change_me_for_production"
+
     defaults:
       run:
         working-directory: ./apps/api
@@ -32,13 +55,23 @@ jobs:
             npx prisma generate
           fi
 
+      - name: Push Database Schema
+        run: npx prisma db push
+
+      # === THÊM BƯỚC NÀY ĐỂ BƠM DỮ LIỆU SEED VÀO TEST DB TRÊN GITHUB ===
+      - name: Seed Test Database
+        run: npx prisma db seed
+
       - name: 2. Lint Backend (oxlint)
         run: npm run lint
 
-      - name: 3. Unit Test Backend (Jest)
+      - name: 3. Unit & Integration Test Backend (Jest)
         run: npm run test
 
-      - name: 4. Build Backend (NestJS)
+      - name: 4. E2E Test Backend (Jest)
+        run: npm run test:e2e
+
+      - name: 5. Build Backend (NestJS)
         run: npm run build
 
   web-ci:
