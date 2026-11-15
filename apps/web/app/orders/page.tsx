@@ -7,6 +7,9 @@ import Image from "next/image";
 type OrderStatus =
   | "PENDING"
   | "PAID"
+  | "PREPARING"
+  | "READY"
+  | "COMPLETED"
   | "CANCELLED"
   | "PAYMENT_FAILED";
 
@@ -46,9 +49,12 @@ type OrderView = {
 const filters = [
   { label: "Tất cả", value: "ALL" },
   { label: "Chờ xử lý", value: "PENDING" },
-  { label: "Thành công", value: "PAID" },
-  { label: "Đã hủy", value: "CANCELLED" },
+  { label: "Đã thanh toán", value: "PAID" },
+  { label: "Đang chuẩn bị", value: "PREPARING" },
+  { label: "Sẵn sàng nhận", value: "READY" },
+  { label: "Đã hoàn thành", value: "COMPLETED" },
   { label: "Thanh toán lỗi", value: "PAYMENT_FAILED" },
+  { label: "Đã hủy", value: "CANCELLED" },
 ] as const;
 
 const statusInfo: Record<
@@ -64,6 +70,21 @@ const statusInfo: Record<
     label: "Đã thanh toán",
     className: "bg-green-100 text-green-800",
     dot: "bg-green-600",
+  },
+  PREPARING: {
+    label: "Đang chuẩn bị",
+    className: "bg-orange-100 text-orange-800",
+    dot: "bg-orange-500",
+  },
+  READY: {
+    label: "Sẵn sàng nhận",
+    className: "bg-blue-100 text-blue-800",
+    dot: "bg-blue-500",
+  },
+  COMPLETED: {
+    label: "Đã hoàn thành",
+    className: "bg-emerald-100 text-emerald-800",
+    dot: "bg-emerald-600",
   },
   CANCELLED: {
     label: "Đã hủy",
@@ -142,8 +163,13 @@ export default function OrdersPage() {
         });
 
         const itemNames = order.items.map((it) => {
-          const size = it.size ? ` (Size ${it.size})` : "";
-          return `${it.product.name}${size} x${it.qty}`;
+          const detail = it.size
+            ? /^[SML](?:\s|\(|$)/.test(it.size)
+              ? ` (Size ${it.size})`
+              : ` (${it.size})`
+            : "";
+
+          return `${it.product.name}${detail} x${it.qty}`;
         });
 
         const image =
