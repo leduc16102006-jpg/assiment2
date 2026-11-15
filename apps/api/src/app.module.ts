@@ -5,6 +5,10 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './products/products.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
+import { PromotionsModule } from './promotions/promotions.module';
+import { OrdersModule } from './orders/orders.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
   imports: [
@@ -13,6 +17,10 @@ import { HealthModule } from './health/health.module';
     ProductsModule,
     AuthModule,
     HealthModule,
+    PromotionsModule,
+    OrdersModule,
+    ScheduleModule.forRoot(),
+    SchedulerModule,
   ],
   controllers: [AppController],
   providers: [],
