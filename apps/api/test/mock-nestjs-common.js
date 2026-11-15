@@ -44,6 +44,13 @@ class ConflictException extends HttpException {
   }
 }
 
+class ServiceUnavailableException extends HttpException {
+  constructor(message = 'Service Unavailable') {
+    super(message, 503);
+    this.name = 'ServiceUnavailableException';
+  }
+}
+
 class ParseIntPipe {
   transform(value) {
     return parseInt(value, 10);
@@ -68,6 +75,7 @@ module.exports = {
   UnauthorizedException,
   ForbiddenException,
   ConflictException,
+  ServiceUnavailableException,
   ParseIntPipe,
   Logger,
   ConsoleLogger,
