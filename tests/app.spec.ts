@@ -1,5 +1,4 @@
-import { AppController } from '../src/app.controller';
-
+import { AppController } from '../apps/api/src/app.controller';
 describe('AppController (Base Scaffold)', () => {
   it('should return running status for BrewLite API', () => {
     const controller = new AppController();

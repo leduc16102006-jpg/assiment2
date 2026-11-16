@@ -24,4 +24,5 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3000
-CMD ["npm", "run", "start:prod"]
+# ✅ SỬA: Chạy Prisma Migrate Deploy an toàn trước khi khởi động Node.js
+CMD ["node", "dist/main"]

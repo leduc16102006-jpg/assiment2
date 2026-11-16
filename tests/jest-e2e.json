@@ -1,0 +1,31 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "../apps/api",
+  "roots": ["<rootDir>/../../tests"],
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "moduleDirectories": [
+    "node_modules",
+    "<rootDir>/node_modules"
+  ],
+  "transform": {
+    "^.+\\.ts$": [
+      "ts-jest",
+      {
+        "useESM": true,
+        "tsconfig": {
+          "module": "ES2022",
+          "moduleResolution": "Node",
+          "esModuleInterop": true,
+          "emitDecoratorMetadata": true,
+          "experimentalDecorators": true
+        }
+      }
+    ]
+  },
+  "moduleNameMapper": {
+    "^src/(.*)$": "<rootDir>/src/$1"
+  },
+  "extensionsToTreatAsEsm": [".ts"],
+  "setupFiles": ["<rootDir>/../../tests/setup-env.js"]
+}

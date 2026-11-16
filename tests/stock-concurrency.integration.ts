@@ -4,8 +4,8 @@ dotenv.config({ quiet: true });
 
 import { describe, it, afterAll, expect } from '@jest/globals';
 
-import { PrismaService } from '../src/prisma/prisma.service';
-import { OrdersService } from '../src/orders/orders.service';
+import { PrismaService } from '../apps/api/src/prisma/prisma.service';
+import { OrdersService } from '../apps/api/src/orders/orders.service';
 
 describe(
   'Task 10.3 - Ingredient Inventory Concurrency',
