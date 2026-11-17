@@ -26,7 +26,7 @@ services:
       dockerfile: Dockerfile
     container_name: brewlite_api_local
     ports:
-      - "3000:3000"
+      - "10000:10000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/brewlite_db?schema=public
       - JWT_SECRET=${JWT_SECRET}
@@ -45,10 +45,10 @@ services:
       dockerfile: Dockerfile
     container_name: brewlite_web_local
     ports:
-      - "3001:3000" # Mở cổng 3001 ở trình duyệt, trỏ vào cổng 3000 của Next.js
+      - "3000:3000" # Frontend chạy tại http://localhost:3000
     environment:
       # Khi chạy trên trình duyệt người dùng, gọi API theo localhost
-      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - NEXT_PUBLIC_API_URL=http://localhost:10000
     depends_on:
       - api
 

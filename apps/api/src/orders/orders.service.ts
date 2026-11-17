@@ -200,9 +200,19 @@ export class OrdersService {
         );
       }
 
+      // ✅ Cập nhật trạng thái + ghi thời gian khi chuyển sang PAYMENT_FAILED
+      const updateData: any = { status: nextStatus };
+      if (nextStatus === 'PAYMENT_FAILED') {
+        updateData.paymentFailedAt = new Date();
+      }
+      // Xóa thời gian thất bại nếu thanh toán thành công
+      if (nextStatus === 'PAID') {
+        updateData.paymentFailedAt = null;
+      }
+
       const result = await tx.order.updateMany({
         where: { id: orderId, status: currentStatus },
-        data: { status: nextStatus },
+        data: updateData,
       });
       if (result.count !== 1) {
         throw new BadRequestException('Trạng thái đơn hàng đã thay đổi. Vui lòng thử lại');
@@ -217,7 +227,7 @@ export class OrdersService {
       if (shouldRelease) {
         const handled = await releaseOrderIngredients(tx, orderId);
         if (!handled) {
-          // Tương thích đơn hàng cũ: giảm trực tiếp trên Product.stock
+          // Tương thích đơn hàng cũ: hoàn trả trực tiếp trên tồn kho
           for (const item of order.items) {
             await tx.product.update({
               where: { id: item.productId },
@@ -257,12 +267,11 @@ export class OrdersService {
   }
 
   /**
-   * EX-09: Tìm các đơn PENDING quá 15 phút -> đánh dấu PAYMENT_FAILED + hoàn trả nguyên liệu
+   * EX-09: PENDING quá 15 phút → PAYMENT_FAILED + hoàn trả nguyên liệu
    */
   async markExpiredOrdersAsFailed(): Promise<{ updatedCount: number }> {
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
 
-    // Tìm danh sách đơn quá hạn
     const expiredOrders = await this.prisma.order.findMany({
       where: {
         status: 'PENDING',
@@ -277,22 +286,19 @@ export class OrdersService {
 
     const orderIds = expiredOrders.map((o) => o.id);
 
-    // Xử lý trong transaction: cập nhật trạng thái + hoàn trả nguyên liệu
     await this.prisma.$transaction(async (tx) => {
-      // Cập nhật trạng thái tất cả đơn quá hạn
       await tx.order.updateMany({
         where: { id: { in: orderIds }, status: 'PENDING' },
         data: {
           status: 'PAYMENT_FAILED',
+          paymentFailedAt: new Date(),
           note: 'Đơn hết hạn do không thanh toán trong vòng 15 phút',
         },
       });
 
-      // Hoàn trả nguyên liệu cho từng đơn
       for (const orderId of orderIds) {
         const handled = await releaseOrderIngredients(tx, orderId);
         if (!handled) {
-          // Tương thích đơn hàng cũ
           const orderItems = await tx.orderItem.findMany({
             where: { orderId },
             select: { productId: true, qty: true },
@@ -311,7 +317,64 @@ export class OrdersService {
     });
 
     this.logger.log(
-      `[EX-09] Đã đánh dấu ${orderIds.length} đơn quá hạn thành PAYMENT_FAILED, hoàn trả nguyên liệu`,
+      `[EX-09] Đã đánh dấu ${orderIds.length} đơn PENDING → PAYMENT_FAILED, hoàn trả nguyên liệu`,
+    );
+
+    return { updatedCount: orderIds.length };
+  }
+
+  /**
+   * EX-09b: PAYMENT_FAILED quá 15 phút → CANCELLED
+   */
+  async markPaymentFailedOrdersAsCancelled(): Promise<{ updatedCount: number }> {
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+    const expiredOrders = await this.prisma.order.findMany({
+      where: {
+        status: 'PAYMENT_FAILED',
+        paymentFailedAt: { lt: fifteenMinutesAgo },
+      },
+      select: { id: true },
+    });
+
+    if (expiredOrders.length === 0) {
+      return { updatedCount: 0 };
+    }
+
+    const orderIds = expiredOrders.map((o) => o.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.order.updateMany({
+        where: { id: { in: orderIds }, status: 'PAYMENT_FAILED' },
+        data: {
+          status: 'CANCELLED',
+          cancelledAt: new Date(),
+          note: 'Đơn bị hủy do không hoàn tất thanh toán trong vòng 15 phút',
+        },
+      });
+
+      for (const orderId of orderIds) {
+        const handled = await releaseOrderIngredients(tx, orderId);
+        if (!handled) {
+          const orderItems = await tx.orderItem.findMany({
+            where: { orderId },
+            select: { productId: true, qty: true },
+          });
+          for (const item of orderItems) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: {
+                stock: { increment: item.qty },
+                version: { increment: 1 },
+              },
+            });
+          }
+        }
+      }
+    });
+
+    this.logger.log(
+      `[EX-09b] Đã hủy ${orderIds.length} đơn PAYMENT_FAILED → CANCELLED`,
     );
 
     return { updatedCount: orderIds.length };

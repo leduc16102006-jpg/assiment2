@@ -1,32 +1,75 @@
-// apps/api/src/scheduler/orders-expiry.job.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { OrdersService } from '../orders/orders.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class OrdersExpiryJob {
   private readonly logger = new Logger(OrdersExpiryJob.name);
+  
+  // Thời gian quy định (tính bằng phút)
+  private readonly PENDING_TIMEOUT = 15;     // ⏱️ 15 phút ở PENDING
+  private readonly PAYMENT_FAILED_TIMEOUT = 15; // ⏱️ 15 phút ở PAYMENT_FAILED
 
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(private prisma: PrismaService) {}
 
-  // Chạy mỗi 5 phút (có thể đổi thành 15 phút nếu muốn)
-  @Cron(CronExpression.EVERY_5_MINUTES, {
-    name: 'check-pending-orders-expiry',
-    timeZone: 'Asia/Ho_Chi_Minh', // ✅ Quan trọng: Đúng múi giờ Việt Nam
-  })
-  async handleExpiredOrders() {
+  @Cron(CronExpression.EVERY_MINUTE) // Kiểm tra mỗi phút 1 lần
+  async handleOrderExpiry() {
     this.logger.log('🔄 Bắt đầu kiểm tra đơn hàng quá hạn thanh toán...');
 
-    try {
-      const result = await this.ordersService.markExpiredOrdersAsFailed();
-      this.logger.log(
-        `✅ Hoàn tất: Đã xử lý ${result.updatedCount} đơn hàng quá hạn`,
-      );
-    } catch (error) {
-      this.logger.error(
-        '❌ Lỗi khi xử lý đơn hàng quá hạn',
-        error instanceof Error ? error.stack : error,
-      );
+    const now = new Date();
+    
+    // ========== BƯỚC 1: PENDING → PAYMENT_FAILED sau 15 phút ==========
+    const pendingDeadline = new Date(now.getTime() - this.PENDING_TIMEOUT * 60 * 1000);
+    
+    const pendingOrders = await this.prisma.order.findMany({
+      where: {
+        status: 'PENDING',
+        createdAt: { lt: pendingDeadline }, // Tạo hơn 15 phút trước
+      },
+    });
+
+    if (pendingOrders.length > 0) {
+      this.logger.log(`⏳ Tìm thấy ${pendingOrders.length} đơn hàng PENDING quá hạn → chuyển sang PAYMENT_FAILED`);
+      
+      for (const order of pendingOrders) {
+        await this.prisma.order.update({
+          where: { id: order.id },
+          data: {
+            status: 'PAYMENT_FAILED',
+            paymentFailedAt: now,
+          },
+        });
+      }
     }
+
+    // ========== BƯỚC 2: PAYMENT_FAILED → CANCELLED sau 15 phút ==========
+    const failedDeadline = new Date(now.getTime() - this.PAYMENT_FAILED_TIMEOUT * 60 * 1000);
+    
+    const failedOrders = await this.prisma.order.findMany({
+      where: {
+        status: 'PAYMENT_FAILED',
+        paymentFailedAt: { lt: failedDeadline }, // Chuyển trạng thái hơn 15 phút trước
+      },
+    });
+
+    if (failedOrders.length > 0) {
+      this.logger.log(`🗑️ Tìm thấy ${failedOrders.length} đơn hàng PAYMENT_FAILED quá hạn → hủy đơn`);
+      
+      for (const order of failedOrders) {
+        await this.prisma.order.update({
+          where: { id: order.id },
+          data: {
+            status: 'CANCELLED',
+            cancelledAt: now,
+            ingredientsReserved: false, // ✅ Trả lại nguyên liệu đã dự trữ
+          },
+        });
+        
+        // TODO: Tùy chọn — Trả lại số lượng tồn kho sản phẩm nếu cần
+        // await this.restoreStock(order.id);
+      }
+    }
+
+    this.logger.log(`✅ Hoàn tất: Xử lý ${pendingOrders.length + failedOrders.length} đơn hàng`);
   }
 }

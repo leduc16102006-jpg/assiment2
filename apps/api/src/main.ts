@@ -30,11 +30,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = Number(process.env.PORT ?? 3000);
-  await app.listen(port);
+  const port = Number(process.env.PORT ?? 10000);
+  await app.listen(port, '0.0.0.0');  // ✅ Lắng nghe trên tất cả địa chỉ mạng
 
   const logger = new Logger('Bootstrap');
-
   logger.log(`Backend listening on port ${port}`);
   logger.log('Swagger available at /api/docs');
 }
