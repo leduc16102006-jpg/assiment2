@@ -1,9 +1,33 @@
-// Decorator rỗng an toàn: luôn trả về hàm decorator nhận target, bỏ qua tham số truyền vào
-const dummyDecorator = () => (target, propertyKey, descriptor) => descriptor || target;
+
+// Decorator rỗng an toàn
+const dummyDecorator = () => (target, propertyKey, descriptor) =>
+  descriptor || target;
+
+// HttpStatus của NestJS
+const HttpStatus = {
+  CONTINUE: 100,
+  OK: 200,
+  CREATED: 201,
+  ACCEPTED: 202,
+  NO_CONTENT: 204,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  METHOD_NOT_ALLOWED: 405,
+  CONFLICT: 409,
+  UNPROCESSABLE_ENTITY: 422,
+  INTERNAL_SERVER_ERROR: 500,
+  SERVICE_UNAVAILABLE: 503,
+};
 
 class HttpException extends Error {
   constructor(response, status = 500) {
-    super(typeof response === 'string' ? response : (response?.message || 'Http Exception'));
+    super(
+      typeof response === 'string'
+        ? response
+        : response?.message || 'Http Exception',
+    );
     this.response = response;
     this.status = status;
   }
@@ -69,16 +93,21 @@ class ConsoleLogger extends Logger {}
 
 module.exports = {
   __esModule: true,
+
+  HttpStatus,
   HttpException,
+
   BadRequestException,
   NotFoundException,
   UnauthorizedException,
   ForbiddenException,
   ConflictException,
   ServiceUnavailableException,
+
   ParseIntPipe,
   Logger,
   ConsoleLogger,
+
   Injectable: dummyDecorator,
   Controller: dummyDecorator,
   Get: dummyDecorator,
@@ -86,15 +115,18 @@ module.exports = {
   Patch: dummyDecorator,
   Put: dummyDecorator,
   Delete: dummyDecorator,
+  HttpCode: dummyDecorator,
+
   Body: dummyDecorator,
   Param: dummyDecorator,
   Req: dummyDecorator,
   Res: dummyDecorator,
   Headers: dummyDecorator,
   UseGuards: dummyDecorator,
+
+  Inject: dummyDecorator,
+  Optional: dummyDecorator,
+  Module: dummyDecorator,
+
   default: {},
 };
-
-module.exports.Inject = dummyDecorator;
-module.exports.Optional = dummyDecorator;
-module.exports.Module = dummyDecorator;
