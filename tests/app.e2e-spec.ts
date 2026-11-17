@@ -4,23 +4,34 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../apps/api/src/app.module';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
-  let accessToken: string;
-  let orderId: number;
-  let productIdToOrder: number;
+  // Tạo mock để thay thế ScheduleModule trong test
+  class MockSchedulerOrchestrator {
+    addCron() {}
+    deleteCron() {}
+  }
 
-  beforeAll(async () => {
-    // 1. ÉP BIẾN MÔI TRƯỜNG TRỰC TIẾP TRƯỚC KHI NESTJS KHỞI ĐỘNG
-    process.env.VNPAY_TMN_CODE = 'MOCK_TMN_CODE';
-    process.env.VNPAY_HASH_SECRET = 'MOCK_HASH_SECRET';
-    process.env.VNPAY_PAYMENT_URL = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
-    process.env.VNPAY_RETURN_URL = 'http://localhost:3000/payments/vnpay/return';
-    process.env.JWT_SECRET = 'MOCK_JWT_SECRET_FOR_E2E_TEST';
+  describe('AppController (e2e)', () => {
+    let app: INestApplication<App>;
+    let accessToken: string;
+    let orderId: number;
+    let productIdToOrder: number;
 
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+    beforeAll(async () => {
+      // Ép biến môi trường TRƯỚC KHI NESTJS KHỞI ĐỘNG
+      process.env.VNPAY_TMN_CODE = 'MOCK_TMN_CODE';
+      process.env.VNPAY_HASH_SECRET = 'MOCK_HASH_SECRET';
+      process.env.VNPAY_PAYMENT_URL = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+      process.env.VNPAY_RETURN_URL = 'http://localhost:3000/payments/vnpay/return';
+      process.env.JWT_SECRET = 'MOCK_JWT_SECRET_FOR_E2E_TEST';
+      process.env.NODE_ENV = 'test'; // ✅ Thêm dòng này
+
+      const moduleFixture: TestingModule = await Test.createTestingModule({
+        imports: [AppModule],
+      })
+        // ✅ Thay thế SchedulerOrchestrator bằng mock để tránh lỗi trùng tên cron job
+        .overrideProvider('SCHEDULER_ORCHESTRATOR')
+        .useClass(MockSchedulerOrchestrator)
+        .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
