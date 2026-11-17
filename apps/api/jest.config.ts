@@ -24,10 +24,10 @@ const config: Config = {
   },
   moduleNameMapper: {
     ...pathsToModuleNameMapper(paths, { prefix: '<rootDir>/' }),
-    '^@nestjs/common$': '<rootDir>/../../tests/mock-nestjs-common.js',
-    '^@nestjs/swagger$': '<rootDir>/../../tests/mock-nestjs-swagger.js',
-    '^@nestjs/passport$': '<rootDir>/../../tests/mock-nestjs-passport.js',
-    '^@nestjs/jwt$': '<rootDir>/../../tests/mock-nestjs-jwt.js',
+    '^@nestjs/common$': '<rootDir>/../../tests/mock-nestjs-common.cjs',
+    '^@nestjs/swagger$': '<rootDir>/../../tests/mock-nestjs-swagger.cjs',
+    '^@nestjs/passport$': '<rootDir>/../../tests/mock-nestjs-passport.cjs',
+    '^@nestjs/jwt$': '<rootDir>/../../tests/mock-nestjs-jwt.cjs',
   },
   collectCoverageFrom: [
     'src/**/*.(t|j)s',

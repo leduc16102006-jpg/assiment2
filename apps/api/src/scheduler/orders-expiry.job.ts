@@ -6,16 +6,18 @@ import { OrdersService } from '../orders/orders.service';
 export class OrdersExpiryJob {
   private readonly logger = new Logger(OrdersExpiryJob.name);
 
-  private readonly PENDING_TIMEOUT = 15;        // ⏱️ 15 phút PENDING → CANCELLED
-  private readonly PAYMENT_FAILED_TIMEOUT = 15;  // ⏱️ 15 phút PAYMENT_FAILED → CANCELLED
+  private readonly PENDING_TIMEOUT = 15;
+  private readonly PAYMENT_FAILED_TIMEOUT = 15;
 
   constructor(private readonly ordersService: OrdersService) {}
 
   @Cron(CronExpression.EVERY_MINUTE, {
     name: 'check-orders-expiry',
     timeZone: 'Asia/Ho_Chi_Minh',
+    disabled: process.env.NODE_ENV === 'test', // ✅ Thêm dòng này
   })
   async handleOrderExpiry() {
+    if (process.env.NODE_ENV === 'test') return;
     this.logger.log('🔄 Bắt đầu kiểm tra đơn hàng quá hạn...');
 
     try {

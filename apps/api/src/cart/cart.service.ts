@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
-import { ICart, ICartItem } from './interfaces/cart.interface';
+import { ICart} from './interfaces/cart.interface';
 import { CART_ERRORS } from './cart.constants';
 
 @Injectable()
