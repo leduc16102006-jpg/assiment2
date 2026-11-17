@@ -1,75 +1,51 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '../prisma/prisma.service';
+import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class OrdersExpiryJob {
   private readonly logger = new Logger(OrdersExpiryJob.name);
-  
-  // Thời gian quy định (tính bằng phút)
-  private readonly PENDING_TIMEOUT = 15;     // ⏱️ 15 phút ở PENDING
-  private readonly PAYMENT_FAILED_TIMEOUT = 15; // ⏱️ 15 phút ở PAYMENT_FAILED
 
-  constructor(private prisma: PrismaService) {}
+  private readonly PENDING_TIMEOUT = 15;        // ⏱️ 15 phút PENDING → CANCELLED
+  private readonly PAYMENT_FAILED_TIMEOUT = 15;  // ⏱️ 15 phút PAYMENT_FAILED → CANCELLED
 
-  @Cron(CronExpression.EVERY_MINUTE) // Kiểm tra mỗi phút 1 lần
+  constructor(private readonly ordersService: OrdersService) {}
+
+  @Cron(CronExpression.EVERY_MINUTE, {
+    name: 'check-orders-expiry',
+    timeZone: 'Asia/Ho_Chi_Minh',
+  })
   async handleOrderExpiry() {
-    this.logger.log('🔄 Bắt đầu kiểm tra đơn hàng quá hạn thanh toán...');
+    this.logger.log('🔄 Bắt đầu kiểm tra đơn hàng quá hạn...');
 
-    const now = new Date();
-    
-    // ========== BƯỚC 1: PENDING → PAYMENT_FAILED sau 15 phút ==========
-    const pendingDeadline = new Date(now.getTime() - this.PENDING_TIMEOUT * 60 * 1000);
-    
-    const pendingOrders = await this.prisma.order.findMany({
-      where: {
-        status: 'PENDING',
-        createdAt: { lt: pendingDeadline }, // Tạo hơn 15 phút trước
-      },
-    });
+    try {
+      const now = new Date();
 
-    if (pendingOrders.length > 0) {
-      this.logger.log(`⏳ Tìm thấy ${pendingOrders.length} đơn hàng PENDING quá hạn → chuyển sang PAYMENT_FAILED`);
-      
-      for (const order of pendingOrders) {
-        await this.prisma.order.update({
-          where: { id: order.id },
-          data: {
-            status: 'PAYMENT_FAILED',
-            paymentFailedAt: now,
-          },
-        });
+      // ========== BƯỚC 1: PENDING quá 15 phút → CANCELLED ==========
+      const pendingDeadline = new Date(now.getTime() - this.PENDING_TIMEOUT * 60 * 1000);
+      const pendingResult = await this.ordersService.cancelExpiredPendingOrders(pendingDeadline);
+      if (pendingResult.updatedCount > 0) {
+        this.logger.log(`🗑️ PENDING → CANCELLED: Đã hủy ${pendingResult.updatedCount} đơn`);
       }
-    }
 
-    // ========== BƯỚC 2: PAYMENT_FAILED → CANCELLED sau 15 phút ==========
-    const failedDeadline = new Date(now.getTime() - this.PAYMENT_FAILED_TIMEOUT * 60 * 1000);
-    
-    const failedOrders = await this.prisma.order.findMany({
-      where: {
-        status: 'PAYMENT_FAILED',
-        paymentFailedAt: { lt: failedDeadline }, // Chuyển trạng thái hơn 15 phút trước
-      },
-    });
-
-    if (failedOrders.length > 0) {
-      this.logger.log(`🗑️ Tìm thấy ${failedOrders.length} đơn hàng PAYMENT_FAILED quá hạn → hủy đơn`);
-      
-      for (const order of failedOrders) {
-        await this.prisma.order.update({
-          where: { id: order.id },
-          data: {
-            status: 'CANCELLED',
-            cancelledAt: now,
-            ingredientsReserved: false, // ✅ Trả lại nguyên liệu đã dự trữ
-          },
-        });
-        
-        // TODO: Tùy chọn — Trả lại số lượng tồn kho sản phẩm nếu cần
-        // await this.restoreStock(order.id);
+      // ========== BƯỚC 2: PAYMENT_FAILED quá 15 phút → CANCELLED ==========
+      const failedDeadline = new Date(now.getTime() - this.PAYMENT_FAILED_TIMEOUT * 60 * 1000);
+      const failedResult = await this.ordersService.cancelExpiredPaymentFailedOrders(failedDeadline);
+      if (failedResult.updatedCount > 0) {
+        this.logger.log(`🗑️ PAYMENT_FAILED → CANCELLED: Đã hủy ${failedResult.updatedCount} đơn`);
       }
-    }
 
-    this.logger.log(`✅ Hoàn tất: Xử lý ${pendingOrders.length + failedOrders.length} đơn hàng`);
+      const total = pendingResult.updatedCount + failedResult.updatedCount;
+      if (total === 0) {
+        this.logger.log('✅ Không có đơn hàng quá hạn');
+      } else {
+        this.logger.log(`✅ Hoàn tất: Tổng cộng hủy ${total} đơn hàng`);
+      }
+    } catch (error) {
+      this.logger.error(
+        '❌ Lỗi xử lý đơn hàng quá hạn',
+        error instanceof Error ? error.stack : error,
+      );
+    }
   }
 }

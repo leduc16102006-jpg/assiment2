@@ -200,7 +200,7 @@ export class OrdersService {
         );
       }
 
-      // ✅ Cập nhật trạng thái + ghi thời gian khi chuyển sang PAYMENT_FAILED
+      // Ghi thời gian khi chuyển sang PAYMENT_FAILED
       const updateData: any = { status: nextStatus };
       if (nextStatus === 'PAYMENT_FAILED') {
         updateData.paymentFailedAt = new Date();
@@ -220,14 +220,16 @@ export class OrdersService {
 
       // Hoàn trả nguyên liệu khi hủy / thanh toán thất bại
       const shouldRelease =
-        (currentStatus === 'PENDING' &&
-          (nextStatus === 'PAYMENT_FAILED' || nextStatus === 'CANCELLED')) ||
-        (currentStatus === 'PAID' && nextStatus === 'CANCELLED');
+        (currentStatus === 'PENDING' && nextStatus === 'PAYMENT_FAILED') ||
+        ((currentStatus === 'PENDING' ||
+          currentStatus === 'PAYMENT_FAILED' ||
+          currentStatus === 'PAID') &&
+          nextStatus === 'CANCELLED');
 
       if (shouldRelease) {
         const handled = await releaseOrderIngredients(tx, orderId);
         if (!handled) {
-          // Tương thích đơn hàng cũ: hoàn trả trực tiếp trên tồn kho
+          // Hoàn trả trực tiếp trên tồn kho
           for (const item of order.items) {
             await tx.product.update({
               where: { id: item.productId },
@@ -240,7 +242,7 @@ export class OrdersService {
         }
       }
 
-      // Giữ lại nguyên liệu khi thử thanh toán lại
+      // Giữ lại nguyên liệu khi thử thanh toán lại PAYMENT_FAILED → PENDING
       if (currentStatus === 'PAYMENT_FAILED' && nextStatus === 'PENDING') {
         const handled = await reserveOrderIngredients(tx, orderId);
         if (!handled) {
@@ -267,15 +269,15 @@ export class OrdersService {
   }
 
   /**
-   * EX-09: PENDING quá 15 phút → PAYMENT_FAILED + hoàn trả nguyên liệu
+   * EX-09a: PENDING quá 15 phút → CANCELLED trực tiếp
    */
-  async markExpiredOrdersAsFailed(): Promise<{ updatedCount: number }> {
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-
+  async cancelExpiredPendingOrders(
+    deadline: Date,
+  ): Promise<{ updatedCount: number }> {
     const expiredOrders = await this.prisma.order.findMany({
       where: {
         status: 'PENDING',
-        createdAt: { lt: fifteenMinutesAgo },
+        createdAt: { lt: deadline },
       },
       select: { id: true },
     });
@@ -290,12 +292,13 @@ export class OrdersService {
       await tx.order.updateMany({
         where: { id: { in: orderIds }, status: 'PENDING' },
         data: {
-          status: 'PAYMENT_FAILED',
-          paymentFailedAt: new Date(),
-          note: 'Đơn hết hạn do không thanh toán trong vòng 15 phút',
+          status: 'CANCELLED',
+          cancelledAt: new Date(),
+          note: 'Đơn hủy tự động: quá 15 phút chưa thanh toán',
         },
       });
 
+      // Hoàn trả nguyên liệu
       for (const orderId of orderIds) {
         const handled = await releaseOrderIngredients(tx, orderId);
         if (!handled) {
@@ -317,7 +320,7 @@ export class OrdersService {
     });
 
     this.logger.log(
-      `[EX-09] Đã đánh dấu ${orderIds.length} đơn PENDING → PAYMENT_FAILED, hoàn trả nguyên liệu`,
+      `[EX-09a] Đã hủy ${orderIds.length} đơn PENDING quá 15 phút → CANCELLED`,
     );
 
     return { updatedCount: orderIds.length };
@@ -326,13 +329,13 @@ export class OrdersService {
   /**
    * EX-09b: PAYMENT_FAILED quá 15 phút → CANCELLED
    */
-  async markPaymentFailedOrdersAsCancelled(): Promise<{ updatedCount: number }> {
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-
+  async cancelExpiredPaymentFailedOrders(
+    deadline: Date,
+  ): Promise<{ updatedCount: number }> {
     const expiredOrders = await this.prisma.order.findMany({
       where: {
         status: 'PAYMENT_FAILED',
-        paymentFailedAt: { lt: fifteenMinutesAgo },
+        paymentFailedAt: { lt: deadline },
       },
       select: { id: true },
     });
@@ -349,10 +352,11 @@ export class OrdersService {
         data: {
           status: 'CANCELLED',
           cancelledAt: new Date(),
-          note: 'Đơn bị hủy do không hoàn tất thanh toán trong vòng 15 phút',
+          note: 'Đơn hủy tự động: thanh toán thất bại quá 15 phút',
         },
       });
 
+      // Hoàn trả nguyên liệu
       for (const orderId of orderIds) {
         const handled = await releaseOrderIngredients(tx, orderId);
         if (!handled) {
@@ -374,7 +378,7 @@ export class OrdersService {
     });
 
     this.logger.log(
-      `[EX-09b] Đã hủy ${orderIds.length} đơn PAYMENT_FAILED → CANCELLED`,
+      `[EX-09b] Đã hủy ${orderIds.length} đơn PAYMENT_FAILED quá 15 phút → CANCELLED`,
     );
 
     return { updatedCount: orderIds.length };
