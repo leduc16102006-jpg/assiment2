@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -14,6 +15,11 @@ export class AddToCartDto {
   @IsString()
   @IsNotEmpty()
   size!: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  toppings?: string[];
 
   @IsOptional()
   @IsString()

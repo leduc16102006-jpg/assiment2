@@ -66,7 +66,7 @@ export class CartController {
         value: {
           productId: 1,
           size: 'M',
-          topping: 'Trân châu',
+          toppings: ['Trân châu', 'Kem cheese'],
           quantity: 1,
         },
       },

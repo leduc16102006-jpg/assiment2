@@ -107,8 +107,7 @@ Bảng phụ phí đang cấu hình:
 | S | 0đ |
 | M | 5.000đ |
 | L | 10.000đ |
-| Trân châu | 5.000đ |
-| Thạch | 5.000đ |
+| Trân châu | 7.000đ |
 | Kem cheese | 10.000đ |
 | Extra shot | 10.000đ |
 

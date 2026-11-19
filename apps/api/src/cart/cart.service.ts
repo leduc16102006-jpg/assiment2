@@ -1,4 +1,3 @@
-
 import {
   Injectable,
   NotFoundException,
@@ -12,7 +11,11 @@ import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { ICart, ICartItem } from './interfaces/cart.interface';
 import { CART_ERRORS } from './cart.constants';
 import { Prisma } from '@prisma/client';
-import { calculateUnitPrice } from '../shared/pricing/product-pricing';
+import {
+  calculateUnitPrice,
+  normalizeToppings,
+  serializeToppings,
+} from '../shared/pricing/product-pricing';
 
 @Injectable()
 export class CartService {
@@ -44,7 +47,8 @@ export class CartService {
     }
 
     const size = dto.size.trim().toUpperCase();
-    const topping = dto.topping?.trim() || '';
+    const normalizedToppings = normalizeToppings(dto.toppings, dto.topping);
+    const topping = serializeToppings(normalizedToppings);
 
     if (!['DEFAULT', 'S', 'M', 'L'].includes(size)) {
       throw new BadRequestException('Kích thước sản phẩm không hợp lệ');
@@ -65,7 +69,11 @@ export class CartService {
           throw new BadRequestException('Giá sản phẩm không hợp lệ');
         }
 
-        const unitPrice = calculateUnitPrice(product.price, size, topping ? [topping] : []);
+        const unitPrice = calculateUnitPrice(
+          product.price,
+          size,
+          normalizedToppings,
+        );
 
         const subtotal = unitPrice * dto.quantity;
 

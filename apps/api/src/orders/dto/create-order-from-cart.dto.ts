@@ -7,7 +7,7 @@ import {
 
 export class CreateOrderFromCartDto {
   @ApiPropertyOptional({
-    example: 'WELCOME10',
+    example: 'WELCOME5',
     description: 'Mã khuyến mãi, không bắt buộc',
   })
   @IsOptional()

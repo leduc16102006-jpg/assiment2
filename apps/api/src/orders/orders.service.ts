@@ -24,7 +24,10 @@ import {
 
 import { CreateOrderFromCartDto } from './dto/create-order-from-cart.dto';
 import { OrderStatus } from './dto/update-order-status.dto';
-import { calculateUnitPrice } from '../shared/pricing/product-pricing';
+import {
+  calculateUnitPrice,
+  parseToppings,
+} from '../shared/pricing/product-pricing';
 
 @Injectable()
 export class OrdersService {
@@ -86,7 +89,7 @@ export class OrdersService {
           productId: item.productId,
           qty: item.quantity,
           size: item.size,
-          toppings: item.topping ? [item.topping] : [],
+          toppings: parseToppings(item.topping),
         }));
 
         // Xóa theo danh sách ID đã đọc.
