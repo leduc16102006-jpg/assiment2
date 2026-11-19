@@ -23,6 +23,7 @@ model User {
 
   orders              Order[]
   loyaltyTransactions LoyaltyTransaction[]
+  cart                Cart?
 }
 
 model Product {
@@ -34,6 +35,7 @@ model Product {
   version    Int          @default(0)
   orderItems OrderItem[]
   recipes    RecipeItem[]
+  cartItems  CartItem[]
 }
 
 model Order {
@@ -55,6 +57,10 @@ model Order {
 
   ingredientsReserved Boolean           @default(false)
   ingredientUses      OrderIngredient[]
+
+  paymentFailedAt DateTime? // Lưu thời điểm chuyển sang PAYMENT_FAILED
+  cancelledAt     DateTime? // Lưu thời điểm hủy đơn
+  note            String? // Ghi chú lý do
 }
 
 model OrderItem {
@@ -67,6 +73,8 @@ model OrderItem {
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
 }
 
 model Payment {
@@ -133,6 +141,7 @@ model RecipeItem {
   ingredient Ingredient @relation(fields: [ingredientId], references: [id])
 
   @@unique([productId, size, ingredientId])
+  @@index([productId])
   @@index([ingredientId])
 }
 
@@ -158,4 +167,31 @@ model OrderIngredient {
 
   @@id([orderId, ingredientId])
   @@index([ingredientId])
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    Int        @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id          String  @id @default(uuid())
+  cartId      String
+  productId   Int
+  productName String
+  size        String
+  topping     String? @default("")
+  quantity    Int     @default(1)
+  unitPrice   Int
+  subtotal    Int
+  cart        Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId, size, topping])
+  @@index([cartId])
+  @@index([productId])
 }

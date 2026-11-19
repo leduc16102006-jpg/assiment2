@@ -1,4 +1,3 @@
-// apps/api/src/scheduler/orders-expiry.job.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { OrdersService } from '../orders/orders.service';
@@ -7,24 +6,46 @@ import { OrdersService } from '../orders/orders.service';
 export class OrdersExpiryJob {
   private readonly logger = new Logger(OrdersExpiryJob.name);
 
+  private readonly PENDING_TIMEOUT = 15;
+  private readonly PAYMENT_FAILED_TIMEOUT = 15;
+
   constructor(private readonly ordersService: OrdersService) {}
 
-  // Chạy mỗi 5 phút (có thể đổi thành 15 phút nếu muốn)
-  @Cron(CronExpression.EVERY_5_MINUTES, {
-    name: 'check-pending-orders-expiry',
-    timeZone: 'Asia/Ho_Chi_Minh', // ✅ Quan trọng: Đúng múi giờ Việt Nam
+  @Cron(CronExpression.EVERY_MINUTE, {
+    name: 'check-orders-expiry',
+    timeZone: 'Asia/Ho_Chi_Minh',
+    disabled: process.env.NODE_ENV === 'test', // ✅ Thêm dòng này
   })
-  async handleExpiredOrders() {
-    this.logger.log('🔄 Bắt đầu kiểm tra đơn hàng quá hạn thanh toán...');
+  async handleOrderExpiry() {
+    if (process.env.NODE_ENV === 'test') return;
+    this.logger.log('🔄 Bắt đầu kiểm tra đơn hàng quá hạn...');
 
     try {
-      const result = await this.ordersService.markExpiredOrdersAsFailed();
-      this.logger.log(
-        `✅ Hoàn tất: Đã xử lý ${result.updatedCount} đơn hàng quá hạn`,
-      );
+      const now = new Date();
+
+      // ========== BƯỚC 1: PENDING quá 15 phút → CANCELLED ==========
+      const pendingDeadline = new Date(now.getTime() - this.PENDING_TIMEOUT * 60 * 1000);
+      const pendingResult = await this.ordersService.cancelExpiredPendingOrders(pendingDeadline);
+      if (pendingResult.updatedCount > 0) {
+        this.logger.log(`🗑️ PENDING → CANCELLED: Đã hủy ${pendingResult.updatedCount} đơn`);
+      }
+
+      // ========== BƯỚC 2: PAYMENT_FAILED quá 15 phút → CANCELLED ==========
+      const failedDeadline = new Date(now.getTime() - this.PAYMENT_FAILED_TIMEOUT * 60 * 1000);
+      const failedResult = await this.ordersService.cancelExpiredPaymentFailedOrders(failedDeadline);
+      if (failedResult.updatedCount > 0) {
+        this.logger.log(`🗑️ PAYMENT_FAILED → CANCELLED: Đã hủy ${failedResult.updatedCount} đơn`);
+      }
+
+      const total = pendingResult.updatedCount + failedResult.updatedCount;
+      if (total === 0) {
+        this.logger.log('✅ Không có đơn hàng quá hạn');
+      } else {
+        this.logger.log(`✅ Hoàn tất: Tổng cộng hủy ${total} đơn hàng`);
+      }
     } catch (error) {
       this.logger.error(
-        '❌ Lỗi khi xử lý đơn hàng quá hạn',
+        '❌ Lỗi xử lý đơn hàng quá hạn',
         error instanceof Error ? error.stack : error,
       );
     }

@@ -8,17 +8,21 @@ import {
   Post,
   Req,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiTags,
+  ApiBody,
 } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrdersService } from './orders.service';
+import { CreateOrderFromCartDto } from './dto/create-order-from-cart.dto';
 
 interface AuthenticatedRequest {
   user: {
@@ -65,5 +69,19 @@ export class OrdersController {
     @Body() dto: UpdateOrderStatusDto,
   ) {
     return this.ordersService.updateStatus(id, dto.status);
+  }
+
+  @Post('from-cart')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Tạo đơn hàng từ giỏ hàng' })
+  @ApiBody({ type: CreateOrderFromCartDto })
+  createFromCart(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateOrderFromCartDto,
+  ){
+  return this.ordersService.createFromCart(
+    req.user.userId,
+    dto,
+  );
   }
 }

@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMinSize,
+  ArrayUnique,
   IsArray,
   IsInt,
   IsOptional,
@@ -36,6 +37,7 @@ export class CreateOrderItemDto {
   })
   @IsOptional()
   @IsArray()
+  @ArrayUnique()
   @IsString({ each: true })
   toppings?: string[];
 }
