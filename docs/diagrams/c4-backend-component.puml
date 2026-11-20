@@ -23,7 +23,7 @@ ContainerDb_Ext(postgres, "PostgreSQL", "PostgreSQL 16", "Deployment: container 
 ' ===== Ranh giới container trong phạm vi: NestJS API =====
 Container_Boundary(nestjs, "NestJS API — container api (local:10000) / Render (prod)", "NestJS 12 / Node.js 20 · Prisma 6 · Modular Monolith (ADR-003)") {
     Component(auth, "Auth Module", "apps/api/src/auth/", "auth.controller.ts · auth.service.ts\nstrategies/jwt.strategy.ts · guards/jwt-auth.guard.ts\nBcrypt + JWT | Bảng: User | FR-04, NFR-02")
-    Component(products, "Products Module", "apps/api/src/products/", "products.controller.ts · products.service.ts\nTính tồn kho khả dụng theo công thức size\nBảng: Product, Ingredient, RecipeItem | FR-01, FR-02")
+    Component(products, "Products Module", "apps/api/src/products/", "products.controller.ts · products.service.ts\nTính tồn kho khả dụng theo công thức size\nBảng: Product, Ingredient, RecipeItem, ToppingRecipe | FR-01, FR-02")
     Component(cart, "Cart Module", "apps/api/src/cart/", "cart.controller.ts · cart.service.ts · cart.constants.ts\nGiỏ hàng lưu PostgreSQL, hỗ trợ nhiều topping\nBảng: Cart, CartItem | FR-03")
     Component(orders, "Orders Module", "apps/api/src/orders/", "orders.controller.ts · orders.service.ts · ingredient-stock.ts\nState Machine + Optimistic Lock (Ingredient.version)\nBảng: Order, OrderItem, OrderIngredient, Ingredient | FR-05, FR-07, FR-08, NFR-01, NFR-05")
     Component(payments, "Payments Module", "apps/api/src/payments/", "payments.controller.ts · payments.service.ts · mock-payment.gateway.ts\nvnpay.controller.ts · vnpay.service.ts\nIdempotency-Key + HMAC-SHA512 + Cộng điểm atomic\nBảng: Payment, LoyaltyTransaction, Order | FR-06, FR-10, NFR-02, NFR-05")
