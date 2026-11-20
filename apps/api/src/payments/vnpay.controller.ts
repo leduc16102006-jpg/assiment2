@@ -238,13 +238,6 @@ async testIpn(@Query('paymentId') paymentId: string) {
     };
   }
   
-async paymentReturn(
-  @Query()
-  query: Record<string, string | string[] | undefined>,
-) {
-  return this.vnpayService.verifyReturn(query);
-}
-
 private getClientIp(req: Request): string {
   const forwardedFor = req.headers['x-forwarded-for'];
 
