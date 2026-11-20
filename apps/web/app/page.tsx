@@ -28,7 +28,7 @@ const CATEGORIES = [
 ];
 
 export default function HomePage() {
-  const { totalQty } = useCart();
+  const { totalQty, resetLocalCartState } = useCart();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -128,6 +128,7 @@ export default function HomePage() {
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('token');
+    resetLocalCartState()
     setIsLoggedIn(false);
   };
 

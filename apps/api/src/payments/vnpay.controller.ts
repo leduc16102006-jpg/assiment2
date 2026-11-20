@@ -100,6 +100,7 @@ export class VnpayController {
 
       const url = await this.vnpayService.createPaymentUrl(
         existing.id,
+        existing.orderId,
         existing.amount,
         this.getClientIp(req),
       );
@@ -158,6 +159,7 @@ export class VnpayController {
 
     const paymentUrl = await this.vnpayService.createPaymentUrl(
       payment.id,
+      order.id,
       payment.amount,
       this.getClientIp(req),
     );
@@ -208,20 +210,31 @@ async testIpn(@Query('paymentId') paymentId: string) {
   return payment;
 }
 
-
-  
-  
+ 
 @Get('return')
-  @Redirect() 
-  async verifyReturn(@Query() query: any) {
+  @Redirect()
+  async verifyReturn(
+    @Query() query: Record<string, string | string[] | undefined>,
+  ) {
     const result = await this.vnpayService.verifyReturn(query);
-    
-    const totalAmount = Number(query.vnp_Amount) / 100;
-    // BỔ SUNG: Nối thêm vnp_ResponseCode vào URL để báo cho Frontend biết
-    const responseCode = result.responseCode || '00'; 
-    
+    const frontendUrl = (
+      process.env.FRONTEND_URL?.trim() || 'http://localhost:3000'
+    ).replace(/\/+$/, '');
+
+    const rawAmount = Number(query.vnp_Amount);
+    const totalAmount = Number.isFinite(rawAmount) ? rawAmount / 100 : 0;
+
+    if (!result.valid) {
+      const errorCode = result.code || '99';
+      return {
+        url: `${frontendUrl}/order-confirmation?vnp_ResponseCode=${encodeURIComponent(errorCode)}`,
+      };
+    }
+
+    const responseCode = result.responseCode || '99';
+
     return {
-      url: `http://localhost:3001/order-confirmation?orderId=${result.orderId}&total=${totalAmount}&vnp_ResponseCode=${String(responseCode)}`
+      url: `${frontendUrl}/order-confirmation?orderId=${result.orderId}&total=${totalAmount}&vnp_ResponseCode=${encodeURIComponent(String(responseCode))}`,
     };
   }
   

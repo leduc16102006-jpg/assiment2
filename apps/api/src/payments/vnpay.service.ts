@@ -246,7 +246,10 @@ async handleIpn(
               in: ['PENDING', 'PAYMENT_FAILED'],
             },
           },
-          data: { status: 'PAID' },
+          data: {
+            status: 'PAID',
+            paymentFailedAt: null,
+          },
         });
 
         if (orderUpdated.count !== 1) {
@@ -276,7 +279,10 @@ async handleIpn(
 
         if (orderToFail && orderToFail.status === 'PENDING') {
           // Hoàn nguyên liệu vào bảng Ingredient
-          if (orderToFail.ingredientsReserved && orderToFail.ingredientUses.length > 0) {
+          if (
+            orderToFail.ingredientsReserved &&
+            orderToFail.ingredientUses.length > 0
+          ) {
             for (const use of orderToFail.ingredientUses) {
               await tx.ingredient.update({
                 where: { id: use.ingredientId },
@@ -286,23 +292,25 @@ async handleIpn(
                 },
               });
             }
+          } else if (orderToFail.ingredientUses.length === 0) {
+            // Fallback cho đơn hàng cũ không quản lý theo Ingredient
+            for (const item of orderToFail.items) {
+              await tx.product.update({
+                where: { id: item.productId },
+                data: {
+                  stock: { increment: item.qty },
+                  version: { increment: 1 },
+                },
+              });
+            }
           }
 
-          // Hoàn stock Product hiển thị
-          for (const item of orderToFail.items) {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: {
-                stock: { increment: item.qty },
-              },
-            });
-          }
-
-          // Cập nhật trạng thái và trả cờ về false
+          // Cập nhật trạng thái, ghi mốc paymentFailedAt cho EX-09b và trả cờ về false
           await tx.order.update({
             where: { id: payment.orderId },
             data: {
               status: 'PAYMENT_FAILED',
+              paymentFailedAt: new Date(),
               ingredientsReserved: false,
             },
           });
@@ -327,6 +335,7 @@ async handleIpn(
 
   async createPaymentUrl(
   paymentId: number,
+  orderId: number,
   amount: number,
   ipAddress: string,
   ): Promise<string> {
@@ -347,7 +356,7 @@ async handleIpn(
     vnp_Locale: 'vn',
     vnp_CurrCode: 'VND',
     vnp_TxnRef: String(paymentId),
-    vnp_OrderInfo: `Thanh toan don hang ${paymentId}`,
+    vnp_OrderInfo: `Thanh toan don hang ${orderId}`,
     vnp_OrderType: 'other',
     vnp_Amount: String(amount * 100),
     vnp_ReturnUrl: this.returnUrl,

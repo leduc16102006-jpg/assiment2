@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useCart } from "@/context/CartContext";
+import { API_URL, clearStoredTokens, getStoredToken } from "@/lib/api";
 
 type OrderStatus =
   | "PENDING"
@@ -103,21 +105,20 @@ function formatPrice(price: number) {
 }
 
 export default function OrdersPage() {
+  const { resetLocalCartState } = useCart();
+
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [orders, setOrders] = useState<OrderView[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       setLoading(true);
       setErrorMsg(null);
 
-      const token =
-        typeof window !== "undefined"
-          ? localStorage.getItem("accessToken") || localStorage.getItem("token")
-          : null;
+      const token = getStoredToken();
 
       if (!token) {
         setIsLoggedIn(false);
@@ -128,10 +129,9 @@ export default function OrdersPage() {
 
       setIsLoggedIn(true);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
-      const res = await fetch(`${apiUrl}/orders/me`, {
+      const res = await fetch(`${API_URL}/orders/me`, {
         method: "GET",
+        cache: "no-store",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -140,6 +140,8 @@ export default function OrdersPage() {
 
       if (!res.ok) {
         if (res.status === 401) {
+          clearStoredTokens();
+          resetLocalCartState();
           setIsLoggedIn(false);
           setErrorMsg("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
           setOrders([]);
@@ -187,23 +189,31 @@ export default function OrdersPage() {
 
       setOrders(mappedOrders);
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải danh sách đơn.");
+      setErrorMsg(
+        err instanceof Error
+          ? err.message
+          : "Đã xảy ra lỗi khi tải danh sách đơn.",
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [resetLocalCartState]);
 
   useEffect(() => {
-    const timer = setTimeout(() => loadOrders(), 0);
+    const timer = setTimeout(() => {
+      void loadOrders();
+    }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [loadOrders]);
 
   const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("token");
+    clearStoredTokens();
+    resetLocalCartState();
     setIsLoggedIn(false);
     setOrders([]);
-    setErrorMsg("Bạn đã đăng xuất thành công. Vui lòng đăng nhập lại để xem lịch sử đơn.");
+    setErrorMsg(
+      "Bạn đã đăng xuất thành công. Vui lòng đăng nhập lại để xem lịch sử đơn.",
+    );
   };
 
   const filteredOrders = useMemo(() => {
@@ -402,9 +412,19 @@ export default function OrdersPage() {
                           {formatPrice(order.total)}
                         </p>
                       </div>
-                      <span className="text-xs font-medium text-[#a49385]">
-                        BrewLite
-                      </span>
+                      {order.status === "PENDING" ||
+                      order.status === "PAYMENT_FAILED" ? (
+                        <Link
+                          href={`/cart?retryOrderId=${order.id}`}
+                          className="rounded-xl bg-[#35251f] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-[#634536]"
+                        >
+                          Thanh toán lại →
+                        </Link>
+                      ) : (
+                        <span className="text-xs font-medium text-[#a49385]">
+                          BrewLite
+                        </span>
+                      )}
                     </div>
                   </div>
                 </article>

@@ -2,6 +2,9 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Cài đặt OpenSSL cho Prisma Engine trên Alpine Linux
+RUN apk add --no-cache openssl
+
 # Copy các file cấu hình package
 COPY package*.json ./
 RUN npm ci
@@ -9,7 +12,7 @@ RUN npm ci
 # Copy toàn bộ mã nguồn Backend
 COPY . .
 
-# Khởi tạo Prisma và Build NestJS
+# Khởi tạo Prisma Client và Build NestJS
 RUN npx prisma generate
 RUN npm run build
 
@@ -17,12 +20,16 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 
-# Copy các file đã build và node_modules từ bước builder
+RUN apk add --no-cache openssl
+
+# Copy các file đã build và tài nguyên Prisma từ bước builder
 COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-EXPOSE 3000
-# ✅ SỬA: Chạy Prisma Migrate Deploy an toàn trước khi khởi động Node.js
-CMD ["node", "dist/main"]
+EXPOSE 10000
+
+# Chạy Prisma Migrate Deploy an toàn trước khi khởi động NestJS
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node dist/main"]

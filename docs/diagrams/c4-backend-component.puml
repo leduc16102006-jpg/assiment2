@@ -1,9 +1,8 @@
 @startuml C4_Backend_Component_BrewLite
 ' ==================================================
 ' C4 Component Diagram — BrewLite NestJS Backend
-' Task 3 (Nhánh docs/task-3-arch-backend)
-' Tiêu chí: truy vết mỗi component -> đường dẫn mã nguồn, bảng DB,
-'           container deployment (docker-compose) và mã yêu cầu SRS
+' Cập nhật đồng bộ Sprint 2 với mã nguồn apps/api/src/,
+' prisma/schema.prisma, docker-compose.yml và docs/requirements/srs.md
 ' ==================================================
 
 !if %variable_exists("RELATIVE_INCLUDE")
@@ -13,56 +12,54 @@
 !endif
 
 LAYOUT_WITH_LEGEND()
-title C4 Component — BrewLite NestJS Backend (UC-05 / FR-05, FR-06, FR-08, FR-10)
+title C4 Component — BrewLite NestJS Backend (FR-01…FR-12, NFR-01…NFR-07)
 
 ' ===== Tác nhân & hệ thống bên ngoài =====
-Person_Ext(customer, "Khách Hàng", "Đặt hàng, thanh toán, xem lịch sử")
-Container_Ext(frontend, "Next.js Web App", "Next.js 14 / React", "Deployment: container web (docker-compose)\nGọi REST API, poll GET /orders/:id")
-Container_Ext(vnpay, "VNPay Sandbox", "Payment Gateway ngoài", "Deployment: dịch vụ bên thứ 3\nTạo giao dịch, gọi IPN /vnpay/ipn")
-ContainerDb_Ext(postgres, "PostgreSQL", "PostgreSQL 16", "Deployment: container db (docker-compose)\nCSDL quan hệ toàn hệ thống")
+Person_Ext(customer, "Khách Hàng", "Xem menu, quản lý giỏ hàng, đặt đơn, thanh toán, xem lịch sử")
+Container_Ext(frontend, "Next.js Web App", "Next.js 16 / React 19", "Deployment: container web (local:3000) / Vercel (prod)\nGọi REST API, đồng bộ giỏ hàng DB & thanh toán lại")
+Container_Ext(vnpay, "VNPay Sandbox", "Payment Gateway ngoài", "Deployment: dịch vụ bên thứ 3\nCổng thanh toán, gọi IPN /payments/vnpay/ipn và Return URL")
+ContainerDb_Ext(postgres, "PostgreSQL", "PostgreSQL 16", "Deployment: container postgres (local) / Neon (prod)\nCSDL quan hệ toàn hệ thống (Prisma ORM)")
 
 ' ===== Ranh giới container trong phạm vi: NestJS API =====
-Container_Boundary(nestjs, "NestJS API — container api (docker-compose)", "NestJS 10 / Node.js 20 · Modular Monolith (ADR-003)") {
-    Component(auth, "Auth Module", "src/auth/", "auth.controller.ts · auth.service.ts\njwt.strategy.ts · jwt-auth.guard.ts · roles.guard.ts\nBảng: users | FR-04, NFR-02")
-    Component(products, "Products Module", "src/products/", "products.controller.ts · products.service.ts\nBảng: products, ingredients, toppings | FR-01, FR-02")
-    Component(cart, "Cart Module", "src/cart/", "cart.controller.ts · cart.service.ts\nGiỏ theo session/Redis | FR-03")
-    Component(orders, "Orders Module", "src/orders/", "orders.controller.ts · orders.service.ts\norder.entity.ts · order-item.entity.ts\nState Machine + Optimistic Lock (ingredients.version)\nBảng: orders, order_items, ingredients | FR-05, FR-08")
-    Component(payments, "Payment Module", "src/payments/", "payments.controller.ts · vnpay.service.ts\nidempotency.service.ts · ipn.controller.ts\nBảng: payments (UNIQUE idempotencyKey) | FR-06, AC-06.1…06.7")
-    Component(promo, "Promotion Module", "src/promotions/", "coupon.service.ts\nBảng: coupons | FR-09")
-    Component(loyalty, "Loyalty Module", "src/loyalty/", "loyalty-point.service.ts\nBảng: loyalty_points | FR-10")
-    Component(config, "Config Module", "src/config/", "@nestjs/config; secrets từ biến môi trường\nJWT secret, VNPay TmnSecret | NFR-02, NFR-04")
-    Component(common, "Common / Shared", "src/common/", "JwtAuthGuard · RolesGuard · ValidationPipe\nExceptionFilter · Interceptors | NFR-02, NFR-07")
-    Component(scheduler, "Scheduler Module", "src/scheduler/", "orders-expiry.job.ts (@nestjs/schedule)\nJob 15 phút: PENDING quá hạn -> PAYMENT_FAILED + hoàn reserved | EX-09")
+Container_Boundary(nestjs, "NestJS API — container api (local:10000) / Render (prod)", "NestJS 12 / Node.js 20 · Prisma 6 · Modular Monolith (ADR-003)") {
+    Component(auth, "Auth Module", "apps/api/src/auth/", "auth.controller.ts · auth.service.ts\nstrategies/jwt.strategy.ts · guards/jwt-auth.guard.ts\nBcrypt + JWT | Bảng: User | FR-04, NFR-02")
+    Component(products, "Products Module", "apps/api/src/products/", "products.controller.ts · products.service.ts\nTính tồn kho khả dụng theo công thức size\nBảng: Product, Ingredient, RecipeItem | FR-01, FR-02")
+    Component(cart, "Cart Module", "apps/api/src/cart/", "cart.controller.ts · cart.service.ts · cart.constants.ts\nGiỏ hàng lưu PostgreSQL, hỗ trợ nhiều topping\nBảng: Cart, CartItem | FR-03")
+    Component(orders, "Orders Module", "apps/api/src/orders/", "orders.controller.ts · orders.service.ts · ingredient-stock.ts\nState Machine + Optimistic Lock (Ingredient.version)\nBảng: Order, OrderItem, OrderIngredient, Ingredient | FR-05, FR-07, FR-08, NFR-01, NFR-05")
+    Component(payments, "Payments Module", "apps/api/src/payments/", "payments.controller.ts · payments.service.ts · mock-payment.gateway.ts\nvnpay.controller.ts · vnpay.service.ts\nIdempotency-Key + HMAC-SHA512 + Cộng điểm atomic\nBảng: Payment, LoyaltyTransaction, Order | FR-06, FR-10, NFR-02, NFR-05")
+    Component(promo, "Promotions Module", "apps/api/src/promotions/", "promotions.controller.ts · promotions.service.ts\nKiểm tra hiệu lực, hạn dùng, giá trị giảm\nBảng: Promotion | FR-09")
+    Component(scheduler, "Scheduler Module", "apps/api/src/scheduler/", "scheduler.module.ts · orders-expiry.job.ts (@nestjs/schedule)\nCron mỗi 1 phút: EX-09a (PENDING > 15p -> CANCELLED)\n& EX-09b (PAYMENT_FAILED > 15p -> CANCELLED) + hoàn kho | FR-08")
+    Component(health, "Health Module", "apps/api/src/health/", "health.controller.ts · health.module.ts\nKiểm tra sức khỏe API & kết nối DB | FR-12, NFR-07")
+    Component(pricing, "Shared Pricing", "apps/api/src/shared/pricing/", "product-pricing.ts\nNguồn tính giá chuẩn (Size S/M/L & 3 Topping) | FR-02, FR-03, FR-05")
+    Component(prisma, "Prisma Module", "apps/api/src/prisma/", "prisma.module.ts · prisma.service.ts\nPrismaClient truy vấn & transaction PostgreSQL | FR-12, NFR-05")
 }
 
-' ===== Quan hệ: Frontend -> Module =====
+' ===== Quan hệ: Khách hàng & Frontend -> Module =====
 Rel(customer, frontend, "Sử dụng")
-Rel(frontend, auth, "POST /auth/register, /login; GET /auth/me")
+Rel(frontend, auth, "POST /auth/register, /auth/login")
 Rel(frontend, products, "GET /products; GET /products/:id")
-Rel(frontend, cart, "Thêm/sửa/xóa giỏ hàng")
-Rel(frontend, orders, "POST /orders; GET /orders/me; GET /orders/:id")
-Rel(frontend, payments, "POST /payments/vnpay/create (Idempotency-Key)")
-Rel(frontend, promo, "Kiểm tra mã khuyến mãi")
+Rel(frontend, cart, "GET/DELETE /cart; POST/PUT /cart/items; DELETE /cart/items/:itemId")
+Rel(frontend, orders, "POST /orders, /orders/from-cart; GET /orders/me, /:id; PATCH /:id/status")
+Rel(frontend, payments, "POST /payments; POST /payments/vnpay/create (Idempotency-Key)")
+Rel(frontend, promo, "GET /promotions/:code")
 
-' ===== Quan hệ: Payment <-> VNPay =====
-Rel(payments, vnpay, "Tạo URL ký HMAC-SHA512; nhận IPN /vnpay/ipn")
-
-' ===== Quan hệ: Module -> Database =====
-Rel(auth, postgres, "users")
-Rel(products, postgres, "products, ingredients, toppings")
-Rel(cart, postgres, "session store / Redis")
-Rel(orders, postgres, "orders, order_items; ingredients.version")
-Rel(payments, postgres, "payments — UNIQUE idempotencyKey")
-Rel(promo, postgres, "coupons")
-Rel(loyalty, postgres, "loyalty_points")
+' ===== Quan hệ: Payments <-> VNPay =====
+Rel(payments, vnpay, "Tạo URL ký HMAC-SHA512; nhận GET /payments/vnpay/ipn & /return")
 
 ' ===== Quan hệ nội bộ module =====
-Rel(orders, payments, "Tạo Payment khi tạo đơn PENDING")
-Rel(payments, orders, "Cập nhật PAID/FAILED sau IPN hợp lệ")
-Rel(orders, promo, "Xác thực & tính giảm giá")
-Rel(payments, loyalty, "Cộng điểm chỉ khi đơn PAID")
-Rel(scheduler, orders, "Quét PENDING > 15 phút; hoàn reserved")
-Rel(common, auth, "Guard/Validation dùng chung")
-Rel(config, payments, "Cung cấp VNPay secret, JWT secret")
+Rel(cart, pricing, "Chuẩn hóa topping & tính unitPrice")
+Rel(orders, pricing, "Tính lại giá & tách topping từ DB")
+Rel(orders, cart, "Đọc & xóa CartItem trong transaction /orders/from-cart")
+Rel(scheduler, orders, "Gọi cancelExpiredPendingOrders & cancelExpiredPaymentFailedOrders")
+
+' ===== Quan hệ: Module -> Prisma -> PostgreSQL =====
+Rel(auth, prisma, "User")
+Rel(products, prisma, "Product, Ingredient, RecipeItem, ToppingRecipe")
+Rel(cart, prisma, "Cart, CartItem, Product")
+Rel(orders, prisma, "Order, OrderItem, OrderIngredient, Ingredient, Promotion")
+Rel(payments, prisma, "Payment, Order, LoyaltyTransaction, Ingredient")
+Rel(promo, prisma, "Promotion")
+Rel(health, prisma, "SELECT 1 kiểm tra kết nối DB")
+Rel(prisma, postgres, "PostgreSQL queries & ACID transactions")
 
 @enduml
