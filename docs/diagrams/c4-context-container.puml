@@ -1,4 +1,3 @@
-
 @startuml C4ContextContainer
 left to right direction
 
@@ -8,7 +7,7 @@ skinparam defaultFontName "Arial"
 skinparam packageStyle rectangle
 skinparam componentStyle rectangle
 
-title BREWLITE - C4 SYSTEM CONTEXT & CONTAINER DIAGRAM
+title BREWLITE - C4 SYSTEM CONTEXT & CONTAINER DIAGRAM (Sprint 2)
 
 ' =========================
 ' PEOPLE
@@ -20,26 +19,26 @@ actor "Customer\n(Khách hàng)" as Customer
 ' =========================
 rectangle "BREWLITE SYSTEM" as BrewLite {
 
-    rectangle "Frontend Application\n[Container: Next.js / React]\n\n- Menu and product selection\n- Shopping cart (React Context)\n- Login / Register\n- Order and payment UI\n- Responsive web interface\n- Cart data stored in localStorage" as Frontend
+    rectangle "Frontend Application\n[Container: Next.js 16 / React 19]\nDeployment: Docker (local:3000) / Vercel (prod)\n\n- Mobile-First PWA (Manifest + PNG Icons)\n- Menu, product customization (Size & Multi-Topping)\n- Hybrid Cart (Guest localStorage -> PostgreSQL DB Cart)\n- Login / Register, Checkout & Retry Payment UI\n- Order Confirmation (AC-06.7 backend status verify) & History" as Frontend
 
-    rectangle "Backend API\n[Container: NestJS / Node.js]\n\nModules:\n- AuthModule\n- ProductsModule\n- OrdersModule\n- PaymentsModule\n- PromotionsModule\n- PrismaModule\n\nProvides REST APIs, validation,\nauthentication and business logic.\nSwagger: /api/docs" as Backend
+    rectangle "Backend API\n[Container: NestJS 12 / Node.js 20 · Modular Monolith]\nDeployment: Docker (local:10000) / Render (prod)\n\nModules:\n- AuthModule (JWT + Bcrypt)\n- ProductsModule & Shared Pricing\n- CartModule (PostgreSQL DB Cart)\n- OrdersModule (State Machine + Optimistic Lock)\n- PaymentsModule (Mock Wallet/Card + VNPay HMAC-SHA512)\n- PromotionsModule\n- SchedulerModule (OrdersExpiryJob EX-09a/09b 15m)\n- HealthModule (/health) & PrismaModule\n\nSwagger: /api/docs" as Backend
 
-    database "Application Database\n[Container: PostgreSQL]\n\n- Users\n- Products\n- Orders\n- Payments\n- Promotions\n- Inventory data\n\nSchema managed by Prisma\nwith database migrations." as Database
+    database "Application Database\n[Container: PostgreSQL 16]\nDeployment: Docker (local) / Neon.tech SSL (prod)\n\n- User, Cart, CartItem\n- Product, Ingredient, RecipeItem, ToppingRecipe\n- Order, OrderItem, OrderIngredient\n- Payment, Promotion, LoyaltyTransaction\n\nSchema & migrations managed by Prisma 6." as Database
 }
 
 ' =========================
 ' EXTERNAL SYSTEM
 ' =========================
-rectangle "VNPay Sandbox\n[External Payment Gateway]\n\nProcesses simulated payment\ntransactions and returns payment results." as VNPay
+rectangle "VNPay Sandbox\n[External Payment Gateway]\n\nProcesses simulated ATM/QR payment\ntransactions, calls IPN webhook and\nredirects customer to Return URL." as VNPay
 
 ' =========================
 ' RELATIONSHIPS
 ' =========================
-Customer --> Frontend : Uses web application\nHTTPS
-Frontend --> Backend : Calls REST API\nHTTPS / JSON\nBearer JWT for authenticated requests
-Backend --> Database : Reads and writes data\nPrisma ORM / SQL
-Backend -down-> VNPay : Creates and processes payment transactions HTTPS
-Frontend --> VNPay : Redirects customer\nto payment page\nHTTPS
-VNPay -up-> Backend : Sends payment result through callback
+Customer --> Frontend : Uses Mobile-First PWA\nHTTPS
+Frontend --> Backend : Calls REST API\nHTTPS / JSON\nBearer JWT + Idempotency-Key
+Backend --> Database : Reads & writes data\nPrisma ORM / ACID SQL Transactions
+Backend -down-> VNPay : Generates HMAC-SHA512\nsigned payment URL
+Frontend --> VNPay : Redirects customer\nto VNPay Sandbox (HTTPS)
+VNPay -up-> Backend : GET /payments/vnpay/ipn (Webhook)\n& GET /payments/vnpay/return (Redirect)
 
 @enduml

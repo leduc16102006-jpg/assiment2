@@ -11,9 +11,9 @@ skinparam defaultFontName Arial
 skinparam nodesep 40
 skinparam ranksep 60
 hide empty methods
-title Task 2.3 - BREWLITE DOMAIN CLASS DIAGRAM
+title Task 2.3 - BREWLITE DOMAIN CLASS DIAGRAM (Đồng bộ schema.prisma Sprint 2)
 
-package "TÀI KHOẢN, ĐƠN HÀNG VÀ THANH TOÁN" {
+package "TÀI KHOẢN & GIỎ HÀNG" {
   class User {
     + <PK> id: Int
     + <UQ> email: String
@@ -23,15 +23,39 @@ package "TÀI KHOẢN, ĐƠN HÀNG VÀ THANH TOÁN" {
     + updatedAt: DateTime
   }
 
+  class Cart {
+    + <PK> id: String (UUID)
+    + <UQ,FK> userId: Int
+    + createdAt: DateTime
+    + updatedAt: DateTime
+  }
+
+  class CartItem {
+    + <PK> id: String (UUID)
+    + <FK> cartId: String
+    + <FK> productId: Int
+    + productName: String
+    + size: String
+    + topping: String? = ""
+    + quantity: Int = 1
+    + unitPrice: Int
+    + subtotal: Int
+  }
+}
+
+package "ĐƠN HÀNG, THANH TOÁN & ĐIỂM THƯỞNG" {
   class Order {
     + <PK> id: Int
     + <FK> userId: Int
-    + status: String = PENDING
+    + status: String = "PENDING"
     + total: Int
-    + subtotal: Int
-    + discountAmount: Int
+    + subtotal: Int = 0
+    + discountAmount: Int = 0
     + <FK> promotionId: Int?
-    
+    + ingredientsReserved: Boolean = false
+    + paymentFailedAt: DateTime?
+    + cancelledAt: DateTime?
+    + note: String?
     + createdAt: DateTime
     + updatedAt: DateTime
   }
@@ -62,33 +86,31 @@ package "TÀI KHOẢN, ĐƠN HÀNG VÀ THANH TOÁN" {
     + points: Int
     + createdAt: DateTime
   }
-
 }
 
-package "SẢN PHẨM VÀ NGUYÊN LIỆU" {
+package "SẢN PHẨM & NGUYÊN LIỆU" {
   class Product {
     + <PK> id: Int
     + name: String
     + price: Int
     + imageUrl: String?
-    + stock: Int
-    + version: Int
+    + stock: Int = 0
+    + version: Int = 0
   }
 
   class Ingredient {
     + <PK> id: Int
     + <UQ> name: String
     + unit: String
-    + stock: Int
-    + reserved: Int = 0
-    + version: Int
+    + stock: Int = 0
+    + version: Int = 0
   }
 
   class RecipeItem {
     + <PK> id: Int
     + <FK> productId: Int
     + <FK> ingredientId: Int
-    + size: String = DEFAULT
+    + size: String = "DEFAULT"
     + quantity: Int
   }
 
@@ -104,7 +126,6 @@ package "SẢN PHẨM VÀ NGUYÊN LIỆU" {
     + <PK,FK> ingredientId: Int
     + quantity: Int
   }
-
 }
 
 package "KHUYẾN MÃI" {
@@ -114,39 +135,44 @@ package "KHUYẾN MÃI" {
     + type: String
     + value: Int
     + maxDiscount: Int?
-    + minOrderAmount: Int
+    + minOrderAmount: Int = 0
     + startsAt: DateTime
     + expiresAt: DateTime
-    + isActive: Boolean
+    + isActive: Boolean = true
     + createdAt: DateTime
   }
-
 }
 
 package "TRẠNG THÁI NGHIỆP VỤ" {
- enum OrderStatusValue {
-   PENDING
-   PAID
-   PAYMENT_FAILED
-   PREPARING
-   READY
-   COMPLETED
-   CANCELLED
- }
+  enum OrderStatusValue {
+    PENDING
+    PAID
+    PAYMENT_FAILED
+    PREPARING
+    READY
+    COMPLETED
+    CANCELLED
+  }
 }
+
 Order ..> OrderStatusValue : "status: String"
+
+User "1" -- "0..1" Cart : "Cascade"
+Cart "1" -- "0..*" CartItem : "Cascade"
+Product "1" -- "0..*" CartItem
 
 User "1" -- "0..*" Order
 User "1" -- "0..*" LoyaltyTransaction
-Order "1" -- "1..*" OrderItem
+Order "1" -- "1..*" OrderItem : "Cascade"
 Order "1" -- "0..*" Payment
 Product "1" -- "0..*" OrderItem
 Promotion "0..1" -- "0..*" Order
 Order "1" -- "0..1" LoyaltyTransaction
-Product "1" -- "0..*" RecipeItem
+
+Product "1" -- "0..*" RecipeItem : "Cascade"
 Ingredient "1" -- "0..*" RecipeItem
 Ingredient "1" -- "0..*" ToppingRecipe
-Order "1" -- "0..*" OrderIngredient
+Order "1" -- "0..*" OrderIngredient : "Cascade"
 Ingredient "1" -- "0..*" OrderIngredient
 
 @enduml
