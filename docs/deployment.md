@@ -4,7 +4,7 @@
 
 Sơ đồ triển khai xem tại `docs/diagrams/DeploymentProduction.svg`.
 
-- **Frontend (`apps/web`):** Triển khai trên **Vercel** (`https://assiment2.vercel.app`), tự động build khi nhánh `develop` được cập nhật, hỗ trợ HTTPS tự động.
+- **Frontend (`apps/web`):** Triển khai trên **Vercel** (`https://assiment2.vercel.app`), tự động build khi nhánh `main` được cập nhật, hỗ trợ HTTPS tự động.
 - **Backend (`apps/api`):** Đóng gói bằng `apps/api/Dockerfile` (Node.js 20 Alpine), triển khai trên **Render** (`https://brewlite-api-5dmc.onrender.com`), tự động chạy `prisma migrate deploy` trước khi mở cổng API.
 - **Database:** PostgreSQL 16 triển khai trên **Neon.tech**, chỉ cho phép kết nối bảo mật qua SSL Connection String (`sslmode=require`), không public thông tin kết nối trong mã nguồn.
 
