@@ -1,0 +1,205 @@
+
+@startuml ActivityCheckout
+title Task 2.1 - Activity Diagram: End-to-End Checkout Workflow
+
+skinparam shadowing false
+skinparam activity {
+    BackgroundColor White
+    BorderColor #555555
+    DiamondBackgroundColor #FFF2CC
+    DiamondBorderColor #B8860B
+    ArrowColor #555555
+}
+skinparam partition {
+    BorderColor #888888
+    BackgroundColor #F8F9FA
+}
+
+|Customer|
+start
+:Mở ứng dụng BrewLite;
+
+|Frontend|
+:Hiển thị trang chủ và menu;
+
+|Customer|
+:Xem danh mục đồ uống;
+:Chọn sản phẩm;
+
+|Frontend|
+:Hiển thị chi tiết sản phẩm;
+
+|Customer|
+:Chọn Size và Topping;
+:Thêm sản phẩm vào giỏ hàng;
+
+|Frontend|
+:Cập nhật CartContext;
+:Lưu giỏ hàng vào localStorage;
+
+|Customer|
+:Truy cập giỏ hàng;
+
+|Frontend|
+:Hiển thị danh sách món và tổng tiền;
+
+|Customer|
+:Kiểm tra / điều chỉnh giỏ hàng;
+
+if (Có mã khuyến mãi?) then (Có)
+    |Customer|
+    :Nhập mã giảm giá;
+
+    |Frontend|
+    :Ghi nhận promotionCode;
+else (Không)
+    |Frontend|
+    :Tiếp tục không áp dụng mã;
+endif
+
+|Customer|
+:Nhấn xác nhận đặt hàng;
+
+|Frontend|
+if (JWT Token hợp lệ?) then (Có)
+    :Tiếp tục quy trình đặt hàng;
+else (Không)
+    :Chuyển hướng đến /login;
+
+    |Customer|
+    :Nhập email và mật khẩu;
+
+    |Frontend|
+    :Gửi POST /auth/login;
+
+    |Backend|
+    :Xác thực thông tin đăng nhập;
+
+    while (Đăng nhập thất bại?) is (Có)
+        |Frontend|
+        :Hiển thị thông báo đăng nhập thất bại;
+
+        |Customer|
+        :Nhập lại thông tin đăng nhập;
+
+        |Frontend|
+        :Gửi lại POST /auth/login;
+
+        |Backend|
+        :Xác thực lại thông tin đăng nhập;
+    endwhile (Không)
+
+    :Trả về JWT Access Token;
+
+    |Frontend|
+    :Lưu JWT Access Token;
+    :Quay lại /cart;
+
+    |Customer|
+    :Nhấn xác nhận đặt hàng;
+endif
+
+|Frontend|
+:Gửi POST /orders\n(items, promotionCode, Bearer JWT);
+
+|Backend|
+:Kiểm tra mã khuyến mãi (nếu có);
+:Kiểm tra tình trạng tồn kho;
+
+while (Tồn kho không đủ?) is (Có)
+    |Frontend|
+    :Nhận HTTP 400 - Out of Stock;
+    :Hiển thị banner vàng cảnh báo;
+    :Giữ nguyên giỏ hàng;
+
+    |Customer|
+    :Điều chỉnh giỏ hàng;
+    :Xác nhận đặt hàng lại;
+
+    |Frontend|
+    :Gửi lại POST /orders;
+
+    |Backend|
+    :Kiểm tra mã khuyến mãi (nếu có);
+    :Kiểm tra tình trạng tồn kho;
+endwhile (Không)
+
+|Backend|
+:Tạo đơn hàng với trạng thái PENDING;
+:Giữ tồn kho cho đơn hàng;
+:Trả kết quả tạo đơn thành công;
+
+|Frontend|
+:Nhận thông tin đơn hàng PENDING;
+
+|Customer|
+:Chọn phương thức thanh toán\n(VNPay / Ví-Thẻ Mock);
+
+|Frontend|
+:Gửi yêu cầu tạo thanh toán;
+
+if (Phương thức thanh toán?) then (VNPay)
+    |Backend|
+    :Khởi tạo yêu cầu thanh toán VNPay;
+    :Trả về URL thanh toán;
+
+    |Frontend|
+    :Chuyển hướng đến VNPay Sandbox;
+
+    |Payment Service|
+    :Hiển thị giao diện VNPay Sandbox;
+
+    |Customer|
+    :Thực hiện hoặc hủy thanh toán;
+
+    |Payment Service|
+    :Trả kết quả giao dịch;
+else (Ví / Thẻ Mock)
+    |Backend|
+    :Khởi tạo yêu cầu thanh toán mô phỏng;
+
+    |Payment Service|
+    :Hiển thị giao diện thanh toán Mock;
+
+    |Customer|
+    :Xác nhận hoặc hủy giao dịch mô phỏng;
+
+    |Payment Service|
+    :Trả kết quả giao dịch mô phỏng;
+endif
+
+|Backend|
+:Tiếp nhận và xử lý kết quả thanh toán;
+
+if (Thanh toán thành công?) then (Có)
+    |Backend|
+    :Cập nhật đơn hàng PAID;
+    :Cộng điểm Loyalty cho khách hàng;
+
+    |Frontend|
+    :Gọi clearCart() để xóa giỏ hàng;
+    :Hiển thị trang /order-confirmation;
+    :Hiển thị mã đơn và trạng thái PAID;
+
+    |Customer|
+    :Xem thông tin xác nhận đơn hàng;
+    :Có thể theo dõi đơn tại /orders;
+
+else (Không / Hủy)
+    |Backend|
+    :Cập nhật đơn hàng PAYMENT_FAILED;
+    :Hoàn trả tồn kho đã giữ;
+
+    |Frontend|
+    :Hiển thị thông báo thanh toán thất bại;
+    :Giữ nguyên giỏ hàng;
+    :Điều hướng về /cart;
+
+    |Customer|
+    :Xem thông báo lỗi;
+    :Có thể chọn thanh toán lại;
+endif
+
+stop
+
+@enduml

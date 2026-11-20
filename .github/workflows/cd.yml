@@ -1,0 +1,163 @@
+name: Continuous Delivery Pipeline
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    tags:
+      - "v*"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-api
+
+jobs:
+  api-quality-gate-and-push:
+    name: 1, 2, 3. Backend Quality Gate & Push GHCR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: brewlite_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/brewlite_test?schema=public"
+      JWT_SECRET: "ci_only_jwt_secret_change_me_for_production"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/api/package-lock.json
+
+      - name: 1a. Install dependencies (Backend)
+        working-directory: ./apps/api
+        run: npm ci
+
+      - name: 1b. Prisma Generate, Migrate & Seed (Test DB)
+        working-directory: ./apps/api
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+          npx prisma db seed
+
+      - name: 1c. Quality Gate (Lint, Unit/Integration Test, E2E Test & Build)
+        working-directory: ./apps/api
+        run: |
+          npm run lint
+          npm run test
+          npm run test:e2e
+          npm run build
+
+      - name: 2. Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 2b. Extract Docker metadata (Commit SHA & SemVer tags)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=long
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: 3. Build and push Docker image to GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/api
+          file: ./apps/api/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  web-quality-gate:
+    name: 1. Frontend Quality Gate (Lint, Test & Build)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./apps/web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies (Frontend)
+        run: npm ci
+
+      - name: Lint, Test & Build (Frontend)
+        run: |
+          npm run lint
+          npm run test
+          npm run build
+
+  deploy-and-smoke-test:
+    name: 4, 5, 6, 7. Deploy, Migration, Smoke Test & Rollback
+    needs: [api-quality-gate-and-push, web-quality-gate]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 4 & 5. Trigger Render Production Deployment (Auto Prisma Migrate Deploy on startup)
+        run: |
+          curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" > /dev/null
+          echo "Đã kích hoạt triển khai bản mới trên Render (container sẽ tự chạy prisma migrate deploy trước khi mở API)."
+
+      - name: 6. Smoke Test (Retry Health Check & DB Connection)
+        run: |
+          echo "Chờ dịch vụ Render khởi động..."
+          sleep 30
+          MAX_ATTEMPTS=15
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            RESPONSE=$(curl -sS -w "\n%{http_code}" "${{ secrets.PROD_API_URL }}/health" || true)
+            HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+            echo "Lần kiểm tra $i/$MAX_ATTEMPTS — HTTP $HTTP_STATUS"
+            if [ "$HTTP_STATUS" -eq 200 ] && echo "$BODY" | grep -q '"database":"connected"'; then
+              echo "Smoke test thành công! API và PostgreSQL Production đang hoạt động ổn định."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Smoke test thất bại sau $MAX_ATTEMPTS lần thử."
+          exit 1
+
+      - name: 7. Stop Pipeline & Rollback Procedure on Failure
+        if: failure()
+        run: |
+          echo "Triển khai hoặc Smoke Test thất bại! Dừng pipeline để bảo vệ môi trường Production."
+          echo "Hướng dẫn Rollback nhanh:"
+          echo "1. Backend (Render): Vào Render Dashboard -> brewlite-api -> Tab Deploys -> chọn bản Live ổn định gần nhất -> Rollback to this deploy (hoặc kéo lại image theo commit SHA trước đó trên GHCR)."
+          echo "2. Frontend (Vercel): Vào Vercel Dashboard -> assiment2 -> Tab Deployments -> chọn bản Ready gần nhất -> Redeploy."
+          exit 1

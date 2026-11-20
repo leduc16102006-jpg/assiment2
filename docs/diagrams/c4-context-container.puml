@@ -1,0 +1,45 @@
+
+@startuml C4ContextContainer
+left to right direction
+
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultFontName "Arial"
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+
+title BREWLITE - C4 SYSTEM CONTEXT & CONTAINER DIAGRAM
+
+' =========================
+' PEOPLE
+' =========================
+actor "Customer\n(Khách hàng)" as Customer
+
+' =========================
+' BREWLITE SYSTEM
+' =========================
+rectangle "BREWLITE SYSTEM" as BrewLite {
+
+    rectangle "Frontend Application\n[Container: Next.js / React]\n\n- Menu and product selection\n- Shopping cart (React Context)\n- Login / Register\n- Order and payment UI\n- Responsive web interface\n- Cart data stored in localStorage" as Frontend
+
+    rectangle "Backend API\n[Container: NestJS / Node.js]\n\nModules:\n- AuthModule\n- ProductsModule\n- OrdersModule\n- PaymentsModule\n- PromotionsModule\n- PrismaModule\n\nProvides REST APIs, validation,\nauthentication and business logic.\nSwagger: /api/docs" as Backend
+
+    database "Application Database\n[Container: PostgreSQL]\n\n- Users\n- Products\n- Orders\n- Payments\n- Promotions\n- Inventory data\n\nSchema managed by Prisma\nwith database migrations." as Database
+}
+
+' =========================
+' EXTERNAL SYSTEM
+' =========================
+rectangle "VNPay Sandbox\n[External Payment Gateway]\n\nProcesses simulated payment\ntransactions and returns payment results." as VNPay
+
+' =========================
+' RELATIONSHIPS
+' =========================
+Customer --> Frontend : Uses web application\nHTTPS
+Frontend --> Backend : Calls REST API\nHTTPS / JSON\nBearer JWT for authenticated requests
+Backend --> Database : Reads and writes data\nPrisma ORM / SQL
+Backend -down-> VNPay : Creates and processes payment transactions HTTPS
+Frontend --> VNPay : Redirects customer\nto payment page\nHTTPS
+VNPay -up-> Backend : Sends payment result through callback
+
+@enduml
