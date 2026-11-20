@@ -2,15 +2,13 @@ name: BrewLite CI Pipeline
 
 on:
   pull_request:
-    branches: [ "develop", "main" ]
+    branches: ["develop", "main"]
 
 jobs:
   api-ci:
-    name: Backend API (Install -> Lint -> Test -> Build)
+    name: Backend API (Install -> Migrate -> Lint -> Test -> Build)
     runs-on: ubuntu-latest
 
-    
-    # === Thêm PostgreSQL Service cho Integration Test ===
     services:
       postgres:
         image: postgres:16
@@ -25,8 +23,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
-    # === Thêm Biến Môi trường ===
+
     env:
       DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/brewlite_test?schema=public"
       JWT_SECRET: "ci_only_jwt_secret_change_me_for_production"
@@ -49,16 +46,12 @@ jobs:
       - name: 1. Install dependencies (Backend)
         run: npm ci
 
-      - name: Generate Prisma Client (if schema exists)
-        run: |
-          if [ -f "prisma/schema.prisma" ]; then
-            npx prisma generate
-          fi
+      - name: Generate Prisma Client
+        run: npx prisma generate
 
-      - name: Push Database Schema
-        run: npx prisma db push
+      - name: Apply Prisma Migrations (Safe Deploy Check)
+        run: npx prisma migrate deploy
 
-      # === THÊM BƯỚC NÀY ĐỂ BƠM DỮ LIỆU SEED VÀO TEST DB TRÊN GITHUB ===
       - name: Seed Test Database
         run: npx prisma db seed
 
@@ -77,6 +70,7 @@ jobs:
   web-ci:
     name: Frontend Web (Install -> Lint -> Test -> Build)
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: ./apps/web

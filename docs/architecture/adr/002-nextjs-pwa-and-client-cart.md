@@ -85,3 +85,15 @@ Dữ liệu giỏ hàng phía Client chỉ phục vụ trải nghiệm người 
 - `apps/web/public/`
 - `apps/web/package.json`
 - `docs/diagrams/c4-context-container.puml`
+
+## 6. Cập nhật bổ sung Sprint 2 (Amendment )
+
+Trong giai đoạn hoàn thiện MVP (Sprint 2), nhóm đã nâng cấp cơ chế quản lý giỏ hàng và làm rõ phạm vi PWA để đồng bộ với Backend:
+
+- **Nâng cấp từ Client-only Cart lên Hybrid Cart (Client + PostgreSQL):**
+  - Khách chưa đăng nhập tiếp tục lưu giỏ tạm ở `localStorage` (`brewlite_guest_cart`).
+  - Sau khi đăng nhập, `CartContext` tự động đồng bộ giỏ tạm lên Backend (`POST /cart/items`) và sử dụng PostgreSQL (`Cart`, `CartItem`) làm nguồn lưu trữ bền vững qua bộ API `/cart` và đặt đơn nguyên tử `POST /orders/from-cart`.
+  - Hỗ trợ nhiều topping đồng thời (chuẩn hóa thứ tự tên topping ở Backend để tự gộp dòng trùng lặp) và bảo toàn khả năng thanh toán lại đơn (`?retryOrderId=`) khi thanh toán thất bại hoặc bị hủy trên VNPay.
+- **Phạm vi PWA thực tế của bản phát hành Assignment 2:**
+  - Đã hoàn thiện giao diện Responsive Mobile-First, `apps/web/app/manifest.ts` (`display: standalone`) và bộ icon vuông PNG (`public/icon-192.png`, `public/icon-512.png`).
+  - Service Worker cho offline caching được ghi nhận cho giai đoạn mở rộng tiếp theo, không bật trong bản MVP nhằm tránh cache sai dữ liệu tồn kho và trạng thái thanh toán theo thời gian thực.

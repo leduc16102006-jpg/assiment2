@@ -1,38 +1,46 @@
 
-# BrewLite — Hệ thống Đặt hàng Cà phê (Assignment 2)
+# BrewLite — Hệ thống Đặt đồ uống Trực tuyến (Assignment 2)
 
-Dự án BrewLite MVP tích hợp đầy đủ quy trình từ thiết kế yêu cầu đến triển khai tự động (Continuous Delivery/Deployment).
+Dự án **BrewLite MVP** hiện thực quy trình **Requirements to Deployment** bằng **Next.js 16 (Mobile-First / PWA)**, **NestJS 12 (Modular Monolith)** và **PostgreSQL 16 (Prisma ORM)**, tích hợp giỏ hàng lưu DB, khóa tồn kho nguyên liệu (Optimistic Locking), thanh toán Ví/Thẻ mô phỏng & **VNPay Sandbox**, tự động hủy đơn quá hạn 15 phút và CI/CD hoàn chỉnh.
 
-## 1. URL Bàn Giao (Production)
+## 1. URL Bàn giao (Production)
 
-- **Frontend (Khách hàng):** https://assiment2-d8ubn0k3k-siuuu11.vercel.app
-- **Backend API (Base URL):** https://brewlite-api-5dmc.onrender.com
+- **Repository GitHub:** https://github.com/leduc16102006-jpg/assiment2
+- **Frontend Production (HTTPS):** https://assiment2.vercel.app
+- **Backend API Production (HTTPS):** https://brewlite-api-5dmc.onrender.com
 - **Health Check API:** https://brewlite-api-5dmc.onrender.com/health
 - **Tài liệu API (Swagger):** https://brewlite-api-5dmc.onrender.com/api/docs
+- **Tài liệu Truy vết & Kiến trúc:** `docs/traceability-matrix.md`, `docs/requirements/srs.md`, `docs/deployment.md`
 
-## 2. Hướng dẫn chạy Local (Môi trường phát triển)
+## 2. Hướng dẫn chạy Local bằng Docker Compose (Khuyến nghị)
 
-Hệ thống được đóng gói bằng Docker Compose. Giảng viên và người chấm có thể chạy dự án thông qua các bước sau:
+Yêu cầu máy đã cài **Docker Desktop** (Docker Compose v2) và **Git**.
 
 1. **Clone repository:**
 
    ```bash
-   git clone <link-repo-github-của-nhóm>
-   cd brewlite-assiment2
+   git clone [https://github.com/leduc16102006-jpg/assiment2.git](https://github.com/leduc16102006-jpg/assiment2.git)
+   cd assiment2
    ```
 
-2. **Cấu hình biến môi trường (BẮT BUỘC):** Hệ thống sử dụng các Secret (Database, JWT, VNPay) không được commit lên Git. Để chạy ứng dụng, vui lòng thực hiện:
-   - Tại thư mục gốc, copy file `.env.example` thành file `.env`.
-   - Tại thư mục `apps/api`, copy file `.env.example` thành file `.env`.
-   - Tại thư mục `apps/web`, copy file `.env.example` thành file `.env.local`.
+2. **Cấu hình biến môi trường (Bắt buộc):** Copy file `.env.example` tại thư mục gốc thành `.env`:
 
-   **Thông tin Secret dành riêng cho Giảng viên nghiệm thu (Được cung cấp qua báo cáo/email):** Vui lòng điền các giá trị thực tế sau vào file `.env` của `apps/api` (hoặc liên hệ nhóm để nhận file `.env` đầy đủ):
-   - `DATABASE_URL`: Sử dụng connection string của Neon.tech do nhóm cung cấp để kết nối đến DB mẫu, hoặc giữ nguyên `localhost` nếu muốn chạy DB mới tinh bằng Docker.
-   - `JWT_SECRET`: Nhập chuỗi secret key do nhóm cung cấp.
-   - `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_PAYMENT_URL`, `VNPAY_RETURN_URL`: Nhập thông tin tài khoản VNPay Sandbox của nhóm.
-   - (Đối với Frontend): Cần cấu hình `NEXT_PUBLIC_API_URL=http://localhost:10000` trong file `.env.local` tại `apps/web`.
+   Bash
 
-3. **Khởi chạy hệ thống:** Sau khi đã điền đủ thông tin vào các file `.env`, chạy lệnh:
+   ```bash
+   cp .env.example .env
+   ```
+
+   *(Trên Windows PowerShell: `Copy-Item .env.example .env`)*
+
+   Mở file `.env` và điền thông tin secret cần thiết (`JWT_SECRET`, `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET` được cung cấp riêng trong báo cáo/email nộp bài, tuyệt đối không commit `.env` lên Git). Giữ nguyên:
+
+   - `PORT=10000`
+   - `FRONTEND_URL=http://localhost:3000`
+   - `VNPAY_RETURN_URL=http://localhost:10000/payments/vnpay/return`
+   - `NEXT_PUBLIC_API_URL=http://localhost:10000`
+
+3. **Build và khởi chạy toàn bộ 3 dịch vụ (PostgreSQL + API + Web):**
 
    Bash
 
@@ -40,38 +48,100 @@ Hệ thống được đóng gói bằng Docker Compose. Giảng viên và ngư�
    docker compose up --build -d
    ```
 
-4. **Khởi tạo dữ liệu (Nếu dùng Database Local mới):** Nếu không dùng DB Neon của nhóm mà dùng DB local mới tinh, cần chạy migration và seed dữ liệu:
+   *Container `api` tự động chạy `prisma migrate deploy` để khởi tạo đầy đủ bảng CSDL trước khi lắng nghe ở cổng `10000`.*
+
+4. **Khởi tạo dữ liệu mẫu (Chạy 1 lần cho Database Local mới):**
 
    Bash
 
    ```bash
-   cd apps/api
-   npx prisma migrate deploy
-   npx prisma db seed
+   docker compose exec api npm run seed
    ```
 
-5. **Kiểm tra trạng thái:**
-   - Frontend chạy tại: `http://localhost:3000`
-   - Backend API chạy tại: `http://localhost:10000`
-   - Database PostgreSQL local chạy ở cổng `5432`.
+   Lệnh trên nạp đủ: tài khoản mẫu (`user@example.com` / `Password123`), mã ưu đãi `WELCOME5`, 10 đồ uống, 12 nguyên liệu, 100 dòng công thức theo size và 3 công thức topping (`Trân châu`, `Extra shot`, `Kem cheese`).
 
-## 3. Hướng dẫn Test & Build
+5. **Truy cập ứng dụng Local:**
 
-Mở terminal, di chuyển vào thư mục `apps/api` và chạy:
+   - **Frontend (Next.js):** `http://localhost:3000`
+   - **Backend API (NestJS):** `http://localhost:10000`
+   - **Health Check:** `http://localhost:10000/health`
+   - **Swagger API Docs:** `http://localhost:10000/api/docs`
+   - **PostgreSQL Local:** `localhost:5432`
 
-- **Quality Gate (Lint & Build):** `npm run lint` và `npm run build`
-- **Unit & Integration Test:** `npm test`
-- **End-to-End Test (E2E):** `npm run test:e2e`
+6. **Dừng hệ thống (vẫn giữ dữ liệu trong volume):**
 
-## 4. Hướng dẫn Deploy & Rollback
+   Bash
 
-- **Deploy:** Quá trình deploy hoàn toàn tự động qua GitHub Actions khi có code mới merge vào nhánh `develop`. (Chi tiết kiến trúc CI/CD xem tại `docs/deployment.md`).
-- **Rollback Frontend (Vercel):** Vào Dashboard Vercel > Tab *Deployments* > Chọn bản build cũ đang xanh > Bấm `...` > *Redeploy*.
-- **Rollback Backend (Render):** Vào Dashboard Render > Tab *Deploys* > Chọn bản deploy cũ > Bấm *Rollback to this deploy*.
+   ```bash
+   docker compose down
+   ```
 
-## 5. Hướng dẫn Giám sát (Monitoring, Logs & Database)
+## 3. Hướng dẫn chạy Local không qua Docker (Dev mode)
 
-- **Xem Health Check:** Truy cập trực tiếp đường dẫn Health Check ở phần 1. Trả về HTTP 200 kèm JSON là API sống.
-- **Xem Logs Server (Backend):** Đăng nhập Render Dashboard > Chọn dịch vụ `brewlite-api` > Xem trực tiếp tại tab *Logs*.
-- **Xem Logs UI (Frontend):** Đăng nhập Vercel Dashboard > Chọn dự án > Tab *Logs*.
-- **Kiểm tra Database Production:** Database được host an toàn trên Neon.tech (không public secret). Để nghiệm thu dữ liệu thật, người quản trị có thể dùng URL kết nối an toàn (cấp riêng) cắm vào phần mềm DBeaver hoặc chạy lệnh `npx prisma studio` từ máy có quyền truy cập.
+1. Tạo file `apps/api/.env` từ `apps/api/.env.example` và `apps/web/.env.local` từ `apps/web/.env.example`.
+2. Đảm bảo PostgreSQL đang chạy (có thể bật riêng DB bằng `docker compose up -d postgres`).
+3. Tại `apps/api`:
+
+   Bash
+
+   ```bash
+   npm ci
+   npx prisma generate
+   npx prisma migrate deploy
+   npm run seed
+   npm run start:dev
+   ```
+
+4. Tại `apps/web` (mở terminal mới):
+
+   Bash
+
+   ```bash
+   npm ci
+   npm run dev
+   ```
+
+## 4. Hướng dẫn Test & Build
+
+### Backend (`apps/api`)
+
+Bash
+
+```bash
+cd apps/api
+npm run lint        # Kiểm tra oxlint
+npm run test        # Unit Test & Concurrency Integration Test (NFR-01)
+npm run test:e2e    # End-to-End Test từ Menu -> Login -> Order -> Payment
+npm run build       # Biên dịch NestJS
+```
+
+### Frontend (`apps/web`)
+
+Bash
+
+```bash
+cd apps/web
+npm run lint        # Kiểm tra ESLint
+npm run test        # Unit Test Component (ProductCard.test.tsx)
+npm run build       # Build Next.js Production (Standalone)
+```
+
+## 5. Hướng dẫn Deploy & Rollback
+
+Chi tiết kiến trúc triển khai và 7 bước CI/CD xem tại [`docs/deployment.md`](https://www.google.com/search?q=docs/deployment.md).
+
+- **Deploy tự động:**
+  - Khi mở Pull Request vào `develop`/`main`: GitHub Actions chạy `.github/workflows/ci.yml` (Migrate, Seed, Lint, Unit/Integration/E2E Test, Build).
+  - Khi merge vào `develop`/`main` hoặc đẩy tag phiên bản `v*` (ví dụ `v1.0.0`): GitHub Actions chạy `.github/workflows/cd.yml` để kiểm tra Quality Gate, build & push Docker image lên GHCR (tag theo Commit SHA / SemVer), kích hoạt deploy Render (tự chạy `prisma migrate deploy`) và chạy Smoke Test kiểm tra `/health`.
+  - Frontend tự động build và triển khai trên Vercel qua HTTPS.
+
+- **Rollback khi triển khai thất bại:**
+  - **Backend (Render):** Vào Render Dashboard → chọn dịch vụ `brewlite-api` → tab **Deploys** → chọn bản deploy `Live` ổn định gần nhất → bấm **Rollback to this deploy** (hoặc chỉ định lại image theo Commit SHA ổn định trước đó trên GHCR).
+  - **Frontend (Vercel):** Vào Vercel Dashboard → chọn dự án `assiment2` → tab **Deployments** → chọn bản `Ready` gần nhất → bấm `...` → **Redeploy** (hoặc **Instant Rollback**).
+
+## 6. Giám sát (Monitoring, Logs & Database)
+
+- **Health Check:** Truy cập `https://brewlite-api-5dmc.onrender.com/health` — trả về HTTP `200` với `{"status":"ok","database":"connected"}`.
+- **Logs Backend:** Render Dashboard → `brewlite-api` → tab **Logs** (kiểm tra log `OrdersExpiryJob` và `[VNPay Controller] IPN response`).
+- **Logs Frontend:** Vercel Dashboard → `assiment2` → tab **Logs**.
+- **Database Production:** Lưu trữ an toàn trên **Neon.tech** (không public cổng trực tiếp, kết nối qua SSL Connection String được quản lý bằng biến môi trường bảo mật).

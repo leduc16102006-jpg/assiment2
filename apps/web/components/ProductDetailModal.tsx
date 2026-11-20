@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -35,6 +34,8 @@ export default function ProductDetailModal({
 
   const [selectedSize, setSelectedSize] = useState<Size>('S');
   const [selectedToppings, setSelectedToppings] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const availableQty =
     product.availableBySize?.[selectedSize] ?? product.stock;
@@ -52,24 +53,37 @@ export default function ProductDetailModal({
     setSelectedToppings((prev) =>
       prev.includes(name)
         ? prev.filter((item) => item !== name)
-        : [...prev, name]
+        : [...prev, name],
     );
   };
 
-  const handleAddToCart = () => {
-    if (availableQty <= 0) return;
+  const handleAddToCart = async () => {
+    if (availableQty <= 0 || submitting) return;
 
-    addToCart({
-      productId: product.id,
-      name: product.name,
-      price: totalPrice,
-      size: selectedSize,
-      toppings: selectedToppings,
-      image: product.imageUrl ?? undefined,
-    });
+    setSubmitting(true);
+    setErrorMsg('');
 
-    onAdded?.();
-    onClose();
+    try {
+      await addToCart({
+        productId: product.id,
+        name: product.name,
+        price: totalPrice,
+        size: selectedSize,
+        toppings: selectedToppings,
+        image: product.imageUrl ?? undefined,
+      });
+
+      onAdded?.();
+      onClose();
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error
+          ? err.message
+          : 'Không thể thêm sản phẩm vào giỏ hàng',
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -204,13 +218,23 @@ export default function ProductDetailModal({
             </span>
           </div>
 
+          {errorMsg && (
+            <p className="mt-3 text-sm font-medium text-red-600">
+              {errorMsg}
+            </p>
+          )}
+
           <button
             type="button"
-            onClick={handleAddToCart}
-            disabled={availableQty <= 0}
+            onClick={() => void handleAddToCart()}
+            disabled={availableQty <= 0 || submitting}
             className="mt-5 w-full rounded-xl bg-amber-800 px-5 py-3 font-semibold text-white transition hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {availableQty <= 0 ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
+            {submitting
+              ? 'Đang thêm...'
+              : availableQty <= 0
+                ? 'Hết hàng'
+                : 'Thêm vào giỏ hàng'}
           </button>
         </div>
       </div>

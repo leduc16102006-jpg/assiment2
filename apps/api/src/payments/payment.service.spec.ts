@@ -211,7 +211,7 @@ describe('PaymentsService', () => {
         userId: 1,
         status: 'PENDING',
       },
-      data: { status: 'PAID' },
+      data: { status: 'PAID', paymentFailedAt: null },
     });
 
     expect(mockTx.payment.update).toHaveBeenCalledWith({
@@ -284,6 +284,17 @@ describe('PaymentsService', () => {
 
   // Payment phải trả về thất bại
   expect(result.status).toBe('PAYMENT_FAILED');
+  expect(mockTx.order.updateMany).toHaveBeenCalledWith({
+    where: {
+      id: 1,
+      userId: 1,
+      status: 'PENDING',
+    },
+    data: {
+      status: 'PAYMENT_FAILED',
+      paymentFailedAt: expect.any(Date),
+    },
+  });
 
   // Phải đọc lượng nguyên liệu đã giữ của Order
   expect(mockTx.order.findUnique).toHaveBeenCalledWith({

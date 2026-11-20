@@ -13,13 +13,13 @@ function ConfirmationContent() {
   const vnpResponseCode = searchParams.get("vnp_ResponseCode") || "00";
   const isSuccess = vnpResponseCode === "00"; 
 
-  const { clearCart } = useCart();
+  const { refreshCart } = useCart();
   const [orderTotal, setOrderTotal] = useState<number>(Number(urlTotal) || 0);
   const [isLoading, setIsLoading] = useState<boolean>(!urlTotal && orderId !== "---");
 
   useEffect(() => {
     if (isSuccess) {
-      clearCart();
+      void refreshCart();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccess]);
@@ -61,10 +61,12 @@ function ConfirmationContent() {
         </p>
         <div className="mt-8 space-y-3">
           <Link
-            href="/cart"
+            href={orderId !== "---" ? `/cart?retryOrderId=${orderId}` : "/cart"}
             className="block w-full rounded-2xl bg-[#35251f] py-3.5 text-sm font-bold text-white transition hover:bg-[#634536]"
           >
-            ← Quay lại Giỏ hàng để thử lại
+            {orderId !== "---"
+              ? `← Quay lại Giỏ hàng thanh toán lại đơn #${orderId}`
+              : "← Quay lại Giỏ hàng để thử lại"}
           </Link>
         </div>
       </div>

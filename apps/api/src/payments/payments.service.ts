@@ -187,13 +187,18 @@ export class PaymentsService {
 
     // 5. Cập nhật trạng thái đơn hàng và bản ghi thanh toán.
     await this.prisma.$transaction(async (tx) => {
+      const orderUpdateData: Prisma.OrderUpdateManyMutationInput =
+        status === 'PAYMENT_FAILED'
+          ? { status, paymentFailedAt: new Date() }
+          : { status, paymentFailedAt: null };
+
       const updated = await tx.order.updateMany({
         where: {
           id: order.id,
           userId,
           status: order.status,
         },
-        data: { status },
+        data: orderUpdateData,
       });
 
       if (updated.count !== 1) {
